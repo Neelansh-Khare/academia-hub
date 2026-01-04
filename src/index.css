@@ -1,0 +1,118 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design system: all colors are HSL tokens, typography and layout primitives live here. */
+
+@layer base {
+  :root {
+    --font-sans: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-display: "Fraunces", "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    --background: 210 40% 98%;
+    --foreground: 222 47% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 15%;
+
+    --primary: 222 78% 55%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 220 42% 94%;
+    --secondary-foreground: 222 47% 24%;
+
+    --muted: 216 33% 94%;
+    --muted-foreground: 215 16% 45%;
+
+    --accent: 190 90% 42%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 89%;
+    --input: 214 32% 89%;
+    --ring: 222 78% 55%;
+
+    --radius: 0.9rem;
+
+    --sidebar-background: 210 40% 99%;
+    --sidebar-foreground: 222 47% 20%;
+    --sidebar-primary: 222 78% 55%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 220 42% 94%;
+    --sidebar-accent-foreground: 222 47% 20%;
+    --sidebar-border: 214 32% 89%;
+    --sidebar-ring: 222 78% 55%;
+
+    --hero-gradient-from: 222 78% 60%;
+    --hero-gradient-to: 190 90% 50%;
+    --hero-gradient-soft: 222 100% 96%;
+  }
+
+  .dark {
+    --background: 230 20% 9%;
+    --foreground: 210 40% 96%;
+
+    --card: 230 32% 12%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 230 32% 12%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 222 80% 72%;
+    --primary-foreground: 230 30% 10%;
+
+    --secondary: 225 22% 18%;
+    --secondary-foreground: 210 40% 96%;
+
+    --muted: 225 19% 20%;
+    --muted-foreground: 215 16% 70%;
+
+    --accent: 190 90% 60%;
+    --accent-foreground: 230 30% 8%;
+
+    --destructive: 0 62% 48%;
+    --destructive-foreground: 210 40% 96%;
+
+    --border: 225 22% 22%;
+    --input: 225 22% 22%;
+    --ring: 222 80% 72%;
+
+    --sidebar-background: 230 24% 10%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 222 80% 72%;
+    --sidebar-primary-foreground: 230 30% 10%;
+    --sidebar-accent: 225 22% 18%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 225 22% 22%;
+    --sidebar-ring: 222 80% 72%;
+
+    --hero-gradient-from: 222 80% 70%;
+    --hero-gradient-to: 190 90% 62%;
+    --hero-gradient-soft: 230 24% 16%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+  }
+}
