@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { usePublications } from '@/hooks/usePublications';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,14 +23,18 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Plus, X, Link2, ExternalLink, Save } from 'lucide-react';
+import { Plus, X, Link2, ExternalLink, Save, RefreshCw, FileText, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 const ProfilePage = () => {
   const { user } = useAuth();
   const { profile, isLoading, updateProfile } = useProfile();
+  const { publications, isLoading: publicationsLoading, syncPublications, isSyncing, deletePublication, isDeleting } = usePublications();
   const [editMode, setEditMode] = useState(false);
+  const [syncSource, setSyncSource] = useState<'orcid' | 'semantic_scholar'>('orcid');
+  const [orcidId, setOrcidId] = useState('');
+  const [authorName, setAuthorName] = useState('');
   const [formData, setFormData] = useState({
     full_name: '',
     headline: '',
@@ -80,6 +85,15 @@ const ProfilePage = () => {
         .eq('user_id', user.id);
       if (data) {
         setLinkedProfiles(data.map((lp) => ({ platform: lp.platform, url: lp.url, username: lp.username || '' })));
+        
+        // Auto-populate ORCID ID from linked profiles
+        const orcidProfile = data.find((lp) => lp.platform === 'orcid');
+        if (orcidProfile?.url) {
+          const orcidMatch = orcidProfile.url.match(/orcid\.org\/([\dX-]+)/);
+          if (orcidMatch) {
+            setOrcidId(orcidMatch[1]);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to load linked profiles:', error);
@@ -167,6 +181,7 @@ const ProfilePage = () => {
         <TabsList>
           <TabsTrigger value="basic">Basic Info</TabsTrigger>
           <TabsTrigger value="research">Research</TabsTrigger>
+          <TabsTrigger value="publications">Publications</TabsTrigger>
           <TabsTrigger value="links">Linked Profiles</TabsTrigger>
         </TabsList>
 
@@ -378,6 +393,183 @@ const ProfilePage = () => {
                   )}
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="publications" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Publications</CardTitle>
+                  <CardDescription>Your research publications and papers</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (syncSource === 'orcid' && orcidId) {
+                      syncPublications({ source: 'orcid', orcidId });
+                    } else if (syncSource === 'semantic_scholar' && authorName) {
+                      syncPublications({ source: 'semantic_scholar', authorName });
+                    } else {
+                      toast.error('Please provide ORCID ID or Author Name');
+                    }
+                  }}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Sync Publications
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {editMode && (
+                <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
+                  <Label className="text-base font-semibold">Sync Settings</Label>
+                  <div className="space-y-2">
+                    <Label>Source</Label>
+                    <Select value={syncSource} onValueChange={(value: 'orcid' | 'semantic_scholar') => setSyncSource(value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="orcid">ORCID</SelectItem>
+                        <SelectItem value="semantic_scholar">Semantic Scholar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {syncSource === 'orcid' ? (
+                    <div className="space-y-2">
+                      <Label>ORCID ID</Label>
+                      <Input
+                        placeholder="0000-0000-0000-0000 or https://orcid.org/0000-0000-0000-0000"
+                        value={orcidId}
+                        onChange={(e) => setOrcidId(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter your ORCID ID (with or without URL)
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>Author Name</Label>
+                      <Input
+                        placeholder="John Doe"
+                        value={authorName}
+                        onChange={(e) => setAuthorName(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter the name as it appears on Semantic Scholar
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {publicationsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : publications.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No publications yet</p>
+                  {editMode && (
+                    <p className="text-sm mt-2">
+                      Use the sync button above to import publications from ORCID or Semantic Scholar
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {publications.map((pub) => (
+                    <div key={pub.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-start gap-2">
+                            <h4 className="font-semibold text-base">{pub.title}</h4>
+                            <Badge variant="outline" className="text-xs whitespace-nowrap">
+                              {pub.source.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          {pub.authors && pub.authors.length > 0 && (
+                            <p className="text-sm text-muted-foreground">
+                              {pub.authors.slice(0, 5).join(', ')}
+                              {pub.authors.length > 5 && ` et al.`}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            {pub.venue && <span>{pub.venue}</span>}
+                            {pub.year && (
+                              <>
+                                {pub.venue && <span>•</span>}
+                                <span>{pub.year}</span>
+                              </>
+                            )}
+                            {pub.citation_count > 0 && (
+                              <>
+                                {(pub.venue || pub.year) && <span>•</span>}
+                                <span>{pub.citation_count} citations</span>
+                              </>
+                            )}
+                          </div>
+                          {pub.abstract && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">{pub.abstract}</p>
+                          )}
+                          <div className="flex items-center gap-2">
+                            {pub.url && (
+                              <a
+                                href={pub.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline flex items-center gap-1"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                View Paper
+                              </a>
+                            )}
+                            {pub.doi && (
+                              <>
+                                {pub.url && <span className="text-xs text-muted-foreground">•</span>}
+                                <a
+                                  href={`https://doi.org/${pub.doi}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-primary hover:underline"
+                                >
+                                  DOI: {pub.doi}
+                                </a>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {editMode && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deletePublication(pub.id)}
+                            disabled={isDeleting}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -38,13 +38,13 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 #### Week 1: Profile Enhancements & Publication Auto-Scraping
 
-**Task 1.1: Auto-scrape Publications from ORCID**
+**Task 1.1: Auto-scrape Publications from ORCID** ✅
 - **Priority**: High
-- **Status**: Not Started
-- **Files to Create/Modify**:
-  - `supabase/functions/scrape-orcid-publications/index.ts` (new Edge Function)
-  - `src/hooks/usePublications.tsx` (new hook)
-  - `src/pages/ProfilePage.tsx` (add publication display section)
+- **Status**: ✅ Completed
+- **Files Created/Modified**:
+  - ✅ `supabase/functions/scrape-publications/index.ts` (new Edge Function - combined with Semantic Scholar)
+  - ✅ `src/hooks/usePublications.tsx` (new hook)
+  - ✅ `src/pages/ProfilePage.tsx` (publications tab added)
 
 - **Implementation Steps**:
   1. Create Supabase Edge Function that calls ORCID API
@@ -65,9 +65,9 @@ This document outlines how to incorporate the remaining features from the PRD in
   // - Save to database
   ```
 
-**Task 1.2: Auto-scrape Publications from Semantic Scholar**
+**Task 1.2: Auto-scrape Publications from Semantic Scholar** ✅
 - **Priority**: High
-- **Status**: Not Started
+- **Status**: ✅ Completed
 - **Implementation Steps**:
   1. Create Edge Function for Semantic Scholar API
   2. Use Semantic Scholar API (https://api.semanticscholar.org/api-docs/) to find publications by author name
@@ -77,14 +77,14 @@ This document outlines how to incorporate the remaining features from the PRD in
 - **Required API Keys**:
   - Semantic Scholar API: Free tier available (https://www.semanticscholar.org/product/api)
 
-**Task 1.3: Auto-scrape Publications from Google Scholar**
+**Task 1.3: Auto-scrape Publications from Google Scholar** ✅
 - **Priority**: Medium
-- **Status**: Not Started
-- **Note**: Google Scholar doesn't have an official API. Consider using web scraping with proper rate limiting, or prompt users to manually link their profile and use Semantic Scholar as primary source.
+- **Status**: ✅ Documented (No implementation - API not available)
+- **Note**: ✅ Google Scholar doesn't have an official API. Manual profile linking is implemented; users are encouraged to use Semantic Scholar as primary source for auto-scraping.
 
-**Task 1.4: Display Publications on Profile**
+**Task 1.4: Display Publications on Profile** ✅
 - **Priority**: High
-- **Status**: Partially Done (schema exists, UI missing)
+- **Status**: ✅ Completed
 - **Implementation Steps**:
   1. Add "Publications" tab to ProfilePage.tsx
   2. Fetch publications using `usePublications` hook
