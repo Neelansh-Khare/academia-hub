@@ -1,73 +1,227 @@
-# Welcome to your Lovable project
+# AcademiaLink (AcademiaHub)
 
-## Project info
+A professional network for research collaboration and discovery — with an intelligent lab assistant that surfaces perfect matches, outreach email drafts, and grant leads.
 
-**URL**: https://lovable.dev/projects/49ef13b6-eb1c-4ad5-b18e-1871c746070e
+## 🎯 Project Status
 
-## How can I edit this code?
+### ✅ Completed Features
 
-There are several ways of editing your application.
+- **User Authentication**: Supabase-based authentication system with sign-up, sign-in, and session management
+- **Dashboard**: User dashboard with navigation to key features
+- **Profile Management**: User profile pages with research fields, methods, tools, and preferences
+- **Search & Discovery**: Tag-based search for research opportunities, labs, and collaborations
+- **Lab Posts**: Create and manage RA positions, research opportunities, and collaboration postings
+- **Applications**: Application management system with CV uploads and messages
+- **AI Lab Assistant**: Intelligent assistant for matching, outreach, and grant discovery
+- **Cold Email Generator**: AI-powered email drafting for academic outreach
+- **Paper Chat**: Chat interface for research papers
+- **Research Assistant**: Additional research assistance tools
+- **Collaboration Board**: Board for managing research collaborations
 
-**Use Lovable**
+### 🚧 In Progress / Planned
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/49ef13b6-eb1c-4ad5-b18e-1871c746070e) and start prompting.
+- Grant opportunity suggestions and discovery
+- Enhanced AI matching algorithms
+- Team dashboards for departments
+- Verification and trust metrics
+- Integration with Google Scholar, arXiv, and Mapbox
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🛠️ Tech Stack
 
-**Use your preferred IDE**
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for fast development and building
+- **React Router** for navigation
+- **TanStack Query (React Query)** for data fetching and state management
+- **React Hook Form** + **Zod** for form validation
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### UI & Styling
+- **shadcn/ui** component library
+- **Tailwind CSS** for styling
+- **Radix UI** primitives
+- **Lucide React** for icons
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Backend & Infrastructure
+- **Supabase** for:
+  - Authentication
+  - PostgreSQL database
+  - Storage (for CVs, papers, and documents)
+  - Edge Functions (AI matching and lab assistant)
 
-Follow these steps:
+### AI Services
+- Supabase Edge Functions for:
+  - AI match scoring
+  - Lab assistant chat
+  - Email generation
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🚀 Getting Started
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Prerequisites
 
-# Step 3: Install the necessary dependencies.
-npm i
+- **Node.js** 18+ (recommended: use [nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+- **npm** or **bun** package manager
+- **Supabase account** and project
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+### Installation & Setup
+
+1. **Clone the repository**
+   ```sh
+   git clone <YOUR_GIT_URL>
+   cd academia-hub
+   ```
+
+2. **Install dependencies**
+   ```sh
+   npm install
+   # or
+   bun install
+   ```
+
+3. **Set up environment variables**
+   
+   Create a `.env` file in the root directory:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_project_url
+   VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+   ```
+   
+   You can find these values in your Supabase project settings under API.
+
+4. **Set up Supabase database**
+   
+   Apply the database migrations:
+   ```sh
+   # Using Supabase CLI (if installed)
+   supabase db reset
+   
+   # Or manually apply migrations from supabase/migrations/ directory
+   # through the Supabase dashboard SQL editor
+   ```
+
+5. **Configure Supabase Edge Functions (Optional)**
+   
+   If you want to use the AI features, set up the Edge Functions:
+   ```sh
+   # Install Supabase CLI if not already installed
+   npm install -g supabase
+   
+   # Login to Supabase
+   supabase login
+   
+   # Link your project
+   supabase link --project-ref your-project-ref
+   
+   # Deploy Edge Functions
+   supabase functions deploy ai-lab-assistant
+   supabase functions deploy ai-match-score
+   ```
+   
+   **Note**: The Edge Functions require a `LOVABLE_API_KEY` environment variable to be set in Supabase project settings.
+
+6. **Start the development server**
+   ```sh
+   npm run dev
+   # or
+   bun dev
+   ```
+
+   The app will be available at `http://localhost:8080` (or the port specified in your terminal output).
+
+## 📜 Available Scripts
+
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Build for production
+- `npm run build:dev` - Build in development mode
+- `npm run preview` - Preview production build locally
+- `npm run lint` - Run ESLint to check code quality
+
+## 📁 Project Structure
+
+```
+academia-hub/
+├── src/
+│   ├── components/          # Reusable React components
+│   │   ├── ui/             # shadcn/ui components
+│   │   ├── Layout.tsx      # Main layout component
+│   │   └── NavLink.tsx     # Navigation link component
+│   ├── hooks/              # Custom React hooks
+│   │   ├── useAuth.tsx     # Authentication hook
+│   │   ├── useProfile.tsx  # Profile management
+│   │   ├── useApplications.tsx
+│   │   ├── useLabPosts.tsx
+│   │   └── useMessages.tsx
+│   ├── pages/              # Page components
+│   │   ├── Index.tsx       # Landing page
+│   │   ├── Auth.tsx        # Authentication page
+│   │   ├── Dashboard.tsx   # User dashboard
+│   │   ├── ProfilePage.tsx
+│   │   ├── ColdEmailGenerator.tsx
+│   │   ├── CollaborationBoard.tsx
+│   │   ├── PaperChat.tsx
+│   │   └── ResearchAssistant.tsx
+│   ├── integrations/       # Third-party integrations
+│   │   └── supabase/       # Supabase client and types
+│   └── lib/                # Utility functions
+├── supabase/
+│   ├── migrations/         # Database migration files
+│   └── functions/          # Supabase Edge Functions
+│       ├── ai-lab-assistant/
+│       └── ai-match-score/
+└── public/                 # Static assets
 ```
 
-**Edit a file directly in GitHub**
+## 🔐 Environment Variables
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Required environment variables (create a `.env` file):
 
-**Use GitHub Codespaces**
+| Variable | Description | Where to Find |
+|----------|-------------|---------------|
+| `VITE_SUPABASE_URL` | Your Supabase project URL | Supabase Dashboard > Settings > API |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Your Supabase anon/public key | Supabase Dashboard > Settings > API |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Optional (for Edge Functions):
+- `LOVABLE_API_KEY` - Set in Supabase project settings > Edge Functions > Secrets
 
-## What technologies are used for this project?
+## 🗄️ Database Schema
 
-This project is built with:
+The project uses Supabase PostgreSQL with migrations in `supabase/migrations/`. Key tables include:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- `profiles` - User profiles with research information
+- `lab_posts` - Research opportunities and job postings
+- `applications` - Application submissions
+- `messages` - Communication between users
+- Storage buckets for CVs, papers, and documents
 
-## How can I deploy this project?
+## 🤝 Contributing
 
-Simply open [Lovable](https://lovable.dev/projects/49ef13b6-eb1c-4ad5-b18e-1871c746070e) and click on Share -> Publish.
+This project was built with [Lovable](https://lovable.dev/projects/49ef13b6-eb1c-4ad5-b18e-1871c746070e). Changes can be made through:
 
-## Can I connect a custom domain to my Lovable project?
+- **Lovable IDE**: Visit the project in Lovable and use AI-assisted development
+- **Local IDE**: Clone, make changes, and push to sync with Lovable
+- **GitHub**: Direct file editing through the GitHub interface
 
-Yes, you can!
+## 📝 License
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+This project is private and proprietary.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 🆘 Troubleshooting
+
+### Port already in use
+If port 8080 is already in use, modify `vite.config.ts` to use a different port.
+
+### Supabase connection errors
+- Verify your `.env` file has the correct Supabase URL and keys
+- Ensure your Supabase project is active and accessible
+- Check that the database migrations have been applied
+
+### AI features not working
+- Ensure Edge Functions are deployed
+- Verify `LOVABLE_API_KEY` is set in Supabase project settings
+- Check Edge Function logs in Supabase dashboard
+
+## 📚 Additional Resources
+
+- [Supabase Documentation](https://supabase.com/docs)
+- [React Documentation](https://react.dev)
+- [Vite Documentation](https://vitejs.dev)
+- [shadcn/ui Documentation](https://ui.shadcn.com)
