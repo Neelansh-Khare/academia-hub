@@ -24,10 +24,13 @@ interface ResearchOutput {
     url?: string;
     abstract?: string;
     year?: number;
+    citationCount?: number;
+    venue?: string;
   }>;
   project_ideas: Array<{
     title: string;
     description: string;
+    methodology?: string;
   }>;
   outline: {
     sections: Array<{
@@ -53,7 +56,6 @@ const ResearchAssistant = () => {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<ResearchOutput | null>(null);
-  const [topic, setTopic] = useState('');
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -85,7 +87,6 @@ const ResearchAssistant = () => {
       };
 
       setOutput(researchOutput);
-      setTopic(data.topic || prompt);
 
       // Save to database
       await supabase.from('research_assistant_outputs').insert({
@@ -106,34 +107,56 @@ const ResearchAssistant = () => {
       const mockOutput: ResearchOutput = {
         papers: [
           {
-            title: 'Foundational Paper in the Field',
-            authors: ['Author 1', 'Author 2'],
-            url: 'https://arxiv.org/abs/example',
-            abstract: 'This paper provides a comprehensive overview...',
-            year: 2023,
+            title: 'Attention Is All You Need',
+            authors: ['Vaswani, A.', 'Shazeer, N.', 'Parmar, N.'],
+            url: 'https://arxiv.org/abs/1706.03762',
+            abstract: 'The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...',
+            year: 2017,
+            citationCount: 95000,
+            venue: 'NeurIPS',
+          },
+          {
+            title: 'BERT: Pre-training of Deep Bidirectional Transformers',
+            authors: ['Devlin, J.', 'Chang, M.', 'Lee, K.'],
+            url: 'https://arxiv.org/abs/1810.04805',
+            abstract: 'We introduce a new language representation model called BERT...',
+            year: 2018,
+            citationCount: 75000,
+            venue: 'NAACL',
           },
         ],
         project_ideas: [
           {
-            title: 'Project Idea 1',
-            description: 'A novel approach to solving this problem...',
+            title: 'Efficient Transformer Architectures',
+            description: 'Explore novel attention mechanisms that reduce computational complexity while maintaining performance.',
+            methodology: 'Implement sparse attention patterns, benchmark on standard NLP tasks',
+          },
+          {
+            title: 'Cross-Modal Learning with Transformers',
+            description: 'Investigate how transformer architectures can be adapted for multi-modal learning tasks.',
+            methodology: 'Design unified encoder-decoder architecture, evaluate on vision-language benchmarks',
           },
         ],
         outline: {
           sections: [
-            { title: 'Introduction', description: 'Background and motivation' },
-            { title: 'Related Work', description: 'Review of existing literature' },
+            { title: 'Introduction', description: 'Background and motivation for the research' },
+            { title: 'Related Work', description: 'Review of existing literature and approaches' },
+            { title: 'Methodology', description: 'Proposed approach and technical details' },
+            { title: 'Experiments', description: 'Experimental setup and evaluation metrics' },
+            { title: 'Results', description: 'Quantitative and qualitative findings' },
+            { title: 'Conclusion', description: 'Summary and future directions' },
           ],
         },
         datasets: [
-          { name: 'Example Dataset', description: 'A dataset for this domain', url: 'https://example.com' },
+          { name: 'glue', description: 'General Language Understanding Evaluation benchmark', url: 'https://huggingface.co/datasets/glue' },
+          { name: 'squad', description: 'Stanford Question Answering Dataset', url: 'https://huggingface.co/datasets/squad' },
         ],
         libraries: [
-          { name: 'Example Library', description: 'A useful library', url: 'https://github.com' },
+          { name: 'Hugging Face Transformers', description: 'State-of-the-art NLP models', url: 'https://huggingface.co/transformers' },
+          { name: 'PyTorch', description: 'Deep learning framework', url: 'https://pytorch.org' },
         ],
       };
       setOutput(mockOutput);
-      setTopic(prompt);
       toast.info('Using demo data (API not configured)');
     } finally {
       setLoading(false);
@@ -202,24 +225,31 @@ const ResearchAssistant = () => {
                 <CardContent className="space-y-4">
                   {output.papers.map((paper, index) => (
                     <div key={index} className="p-4 border rounded-lg space-y-2">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <h4 className="font-semibold">{paper.title}</h4>
                         {paper.url && (
                           <a
                             href={paper.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline"
+                            className="text-primary hover:underline flex-shrink-0"
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
                         )}
                       </div>
-                      {paper.authors && (
-                        <p className="text-sm text-muted-foreground">
-                          {paper.authors.join(', ')} {paper.year && `(${paper.year})`}
-                        </p>
-                      )}
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        {paper.authors && paper.authors.length > 0 && (
+                          <span>{paper.authors.slice(0, 3).join(', ')}{paper.authors.length > 3 ? ' et al.' : ''}</span>
+                        )}
+                        {paper.year && <Badge variant="outline">{paper.year}</Badge>}
+                        {paper.citationCount !== undefined && paper.citationCount > 0 && (
+                          <Badge variant="secondary">{paper.citationCount} citations</Badge>
+                        )}
+                        {paper.venue && (
+                          <Badge variant="outline" className="text-xs">{paper.venue}</Badge>
+                        )}
+                      </div>
                       {paper.abstract && (
                         <p className="text-sm text-muted-foreground line-clamp-2">{paper.abstract}</p>
                       )}
@@ -237,9 +267,15 @@ const ResearchAssistant = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {output.project_ideas.map((idea, index) => (
-                    <div key={index} className="p-4 border rounded-lg">
-                      <h4 className="font-semibold mb-2">{idea.title}</h4>
+                    <div key={index} className="p-4 border rounded-lg space-y-2">
+                      <h4 className="font-semibold">{idea.title}</h4>
                       <p className="text-sm text-muted-foreground">{idea.description}</p>
+                      {idea.methodology && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <Badge variant="outline" className="text-xs">Methodology</Badge>
+                          <span className="text-xs text-muted-foreground">{idea.methodology}</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </CardContent>
@@ -341,14 +377,20 @@ const ResearchAssistant = () => {
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>
-                Enter a research topic or question, and our AI will generate:
+                Enter a research topic or question, and our AI will:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-2">
-                <li>Relevant papers from arXiv and Semantic Scholar</li>
-                <li>Project ideas to explore</li>
-                <li>A structured paper outline</li>
-                <li>Recommended datasets and libraries</li>
+                <li>Search <strong>Semantic Scholar</strong> for relevant papers with citation data</li>
+                <li>Query <strong>arXiv</strong> for the latest preprints</li>
+                <li>Find datasets on <strong>HuggingFace</strong></li>
+                <li>Generate project ideas based on research gaps</li>
+                <li>Create a structured paper outline</li>
+                <li>Recommend libraries and tools</li>
               </ul>
+              <Separator className="my-3" />
+              <p className="text-xs">
+                Papers are deduplicated and sorted by citation count for relevance.
+              </p>
             </CardContent>
           </Card>
         </div>

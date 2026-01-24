@@ -116,7 +116,7 @@ A professional network for research collaboration and discovery — with an inte
    supabase functions deploy ai-match-score
    ```
    
-   **Note**: The Edge Functions require a `LOVABLE_API_KEY` environment variable to be set in Supabase project settings.
+   **Note**: The Edge Functions require an `OPENAI_API_KEY` environment variable to be set in Supabase project settings (Edge Functions > Secrets).
 
 6. **Start the development server**
    ```sh
@@ -179,8 +179,8 @@ Required environment variables (create a `.env` file):
 | `VITE_SUPABASE_URL` | Your Supabase project URL | Supabase Dashboard > Settings > API |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Your Supabase anon/public key | Supabase Dashboard > Settings > API |
 
-Optional (for Edge Functions):
-- `LOVABLE_API_KEY` - Set in Supabase project settings > Edge Functions > Secrets
+Required for Edge Functions (set in Supabase project settings > Edge Functions > Secrets):
+- `OPENAI_API_KEY` - Your OpenAI API key (get from https://platform.openai.com/)
 
 ## 🗄️ Database Schema
 
@@ -194,11 +194,13 @@ The project uses Supabase PostgreSQL with migrations in `supabase/migrations/`. 
 
 ## 🤝 Contributing
 
-This project was built with [Lovable](https://lovable.dev/projects/49ef13b6-eb1c-4ad5-b18e-1871c746070e). Changes can be made through:
+Contributions are welcome! To contribute:
 
-- **Lovable IDE**: Visit the project in Lovable and use AI-assisted development
-- **Local IDE**: Clone, make changes, and push to sync with Lovable
-- **GitHub**: Direct file editing through the GitHub interface
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📝 License
 
@@ -215,9 +217,9 @@ If port 8080 is already in use, modify `vite.config.ts` to use a different port.
 - Check that the database migrations have been applied
 
 ### AI features not working
-- Ensure Edge Functions are deployed
-- Verify `LOVABLE_API_KEY` is set in Supabase project settings
-- Check Edge Function logs in Supabase dashboard
+- Ensure Edge Functions are deployed (`supabase functions deploy`)
+- Verify `OPENAI_API_KEY` is set in Supabase project settings > Edge Functions > Secrets
+- Check Edge Function logs in Supabase dashboard for errors
 
 ## 📚 Additional Resources
 

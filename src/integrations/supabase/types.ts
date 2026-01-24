@@ -163,6 +163,9 @@ export type Database = {
           research_fields: string[] | null
           tools: string[] | null
           updated_at: string
+          degree_status: string | null
+          orcid_id: string | null
+          google_scholar_id: string | null
         }
         Insert: {
           account_type?: string | null
@@ -179,6 +182,9 @@ export type Database = {
           research_fields?: string[] | null
           tools?: string[] | null
           updated_at?: string
+          degree_status?: string | null
+          orcid_id?: string | null
+          google_scholar_id?: string | null
         }
         Update: {
           account_type?: string | null
@@ -195,6 +201,9 @@ export type Database = {
           research_fields?: string[] | null
           tools?: string[] | null
           updated_at?: string
+          degree_status?: string | null
+          orcid_id?: string | null
+          google_scholar_id?: string | null
         }
         Relationships: []
       }
@@ -215,6 +224,368 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      linked_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          platform: string
+          url: string | null
+          username: string | null
+          verified: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          platform: string
+          url?: string | null
+          username?: string | null
+          verified?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          platform?: string
+          url?: string | null
+          username?: string | null
+          verified?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      publications: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          authors: string[] | null
+          venue: string | null
+          year: number | null
+          url: string | null
+          doi: string | null
+          abstract: string | null
+          citation_count: number | null
+          source: string | null
+          source_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          authors?: string[] | null
+          venue?: string | null
+          year?: number | null
+          url?: string | null
+          doi?: string | null
+          abstract?: string | null
+          citation_count?: number | null
+          source?: string | null
+          source_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          authors?: string[] | null
+          venue?: string | null
+          year?: number | null
+          url?: string | null
+          doi?: string | null
+          abstract?: string | null
+          citation_count?: number | null
+          source?: string | null
+          source_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      papers: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          filename: string
+          file_url: string
+          page_count: number | null
+          processed: boolean
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          filename: string
+          file_url: string
+          page_count?: number | null
+          processed?: boolean
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          filename?: string
+          file_url?: string
+          page_count?: number | null
+          processed?: boolean
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      paper_chunks: {
+        Row: {
+          id: string
+          paper_id: string
+          chunk_index: number
+          chunk_text: string
+          page_number: number | null
+          embedding: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          paper_id: string
+          chunk_index: number
+          chunk_text: string
+          page_number?: number | null
+          embedding?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          paper_id?: string
+          chunk_index?: number
+          chunk_text?: string
+          page_number?: number | null
+          embedding?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paper_chunks_paper_id_fkey"
+            columns: ["paper_id"]
+            isOneToOne: false
+            referencedRelation: "papers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      paper_conversations: {
+        Row: {
+          id: string
+          paper_id: string
+          user_id: string
+          title: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          paper_id: string
+          user_id: string
+          title?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          paper_id?: string
+          user_id?: string
+          title?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paper_conversations_paper_id_fkey"
+            columns: ["paper_id"]
+            isOneToOne: false
+            referencedRelation: "papers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      paper_messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          role: string
+          content: string
+          chunks_used: string[] | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          role: string
+          content: string
+          chunks_used?: string[] | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          role?: string
+          content?: string
+          chunks_used?: string[] | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paper_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "paper_conversations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      research_assistant_outputs: {
+        Row: {
+          id: string
+          user_id: string
+          prompt: string
+          topic: string | null
+          papers: Json | null
+          project_ideas: Json | null
+          outline: Json | null
+          datasets: Json | null
+          libraries: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          prompt: string
+          topic?: string | null
+          papers?: Json | null
+          project_ideas?: Json | null
+          outline?: Json | null
+          datasets?: Json | null
+          libraries?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          prompt?: string
+          topic?: string | null
+          papers?: Json | null
+          project_ideas?: Json | null
+          outline?: Json | null
+          datasets?: Json | null
+          libraries?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cold_emails: {
+        Row: {
+          id: string
+          user_id: string
+          recipient_name: string | null
+          recipient_email: string | null
+          recipient_institution: string | null
+          subject: string
+          body: string
+          tone: string | null
+          context: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          recipient_name?: string | null
+          recipient_email?: string | null
+          recipient_institution?: string | null
+          subject: string
+          body: string
+          tone?: string | null
+          context?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          recipient_name?: string | null
+          recipient_email?: string | null
+          recipient_institution?: string | null
+          subject?: string
+          body?: string
+          tone?: string | null
+          context?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      match_scores: {
+        Row: {
+          id: string
+          student_id: string
+          post_id: string
+          overall_score: number
+          keyword_score: number | null
+          skills_score: number | null
+          proximity_score: number | null
+          llm_score: number | null
+          explanation: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          post_id: string
+          overall_score: number
+          keyword_score?: number | null
+          skills_score?: number | null
+          proximity_score?: number | null
+          llm_score?: number | null
+          explanation?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          post_id?: string
+          overall_score?: number
+          keyword_score?: number | null
+          skills_score?: number | null
+          proximity_score?: number | null
+          llm_score?: number | null
+          explanation?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_scores_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "lab_posts"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

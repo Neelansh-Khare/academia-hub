@@ -13,22 +13,67 @@ This document outlines how to incorporate the remaining features from the PRD in
 - Research assistant UI
 - Profile management with research fields, methods, tools
 - Linked profiles (manual linking)
+- **Publication auto-scraping** (ORCID & Semantic Scholar) ✅
+- **Research Assistant API integrations** ✅:
+  - Semantic Scholar API for paper discovery
+  - arXiv API for preprints
+  - HuggingFace Datasets API for dataset discovery
+  - LLM-powered project ideas and outline generation
+- **All page routes configured** ✅
+- **TypeScript types for all 14 database tables** ✅
 
 ### 🟡 Partially Implemented (Needs Enhancement)
-- **Smart Matchmaking**: Database schema exists, but AI matching algorithm needs enhancement
+- **Smart Matchmaking**: Edge function exists, UI ready, but not fully connected to frontend
 - **ScholarGPT (Paper Chat)**: UI exists, but RAG system not fully implemented
-- **Auto Research Assistant**: UI exists, but needs actual API integrations
-- **Profiles**: Manual entry works, but auto-scraping from ORCID/Semantic Scholar missing
+- **Cold Email Generator**: UI exists, needs AI integration
+- **Profile Page**: UI complete, publications tab works, linked profiles partial
 
 ### ❌ Not Yet Implemented
-- Auto-scraping publications from ORCID/Semantic Scholar
 - Full RAG implementation for paper processing
-- API integrations (Semantic Scholar, arXiv, HuggingFace Datasets)
 - Real-time professor-student chat
 - Calendar sync and timeline planning
 - Collaborative document editor
 - Community Q&A board
 - Integration with Notion/Obsidian
+
+---
+
+## Technical Infrastructure
+
+### AI Provider: OpenAI
+The project uses OpenAI directly for LLM features:
+- **Model**: `gpt-4o-mini` (fast, cost-effective)
+- **Used in**: `ai-lab-assistant`, `ai-match-score` edge functions
+- **Requires**: `OPENAI_API_KEY` environment variable
+- **Endpoint**: `https://api.openai.com/v1/chat/completions`
+
+### External APIs Integrated
+| API | Status | Purpose | Rate Limits |
+|-----|--------|---------|-------------|
+| OpenAI | ✅ Working | LLM generation (gpt-4o-mini) | Per account |
+| Semantic Scholar | ✅ Working | Paper search, author publications | 100 req/min (free) |
+| arXiv | ✅ Working | Preprint search | 1 req/3 sec |
+| HuggingFace Datasets | ✅ Working | Dataset discovery | No limit (public) |
+| ORCID | ✅ Working | Publication scraping | Reasonable use |
+
+### Database Tables (14 total)
+All tables have TypeScript types defined in `src/integrations/supabase/types.ts`:
+- **Core**: `profiles`, `user_roles`, `lab_posts`, `applications`, `messages`
+- **Publications**: `publications`, `linked_profiles`
+- **Papers**: `papers`, `paper_chunks`, `paper_conversations`, `paper_messages`
+- **AI Features**: `research_assistant_outputs`, `cold_emails`, `match_scores`
+
+### Page Routes (all configured in App.tsx)
+| Route | Page | Status |
+|-------|------|--------|
+| `/` | Index (Landing) | ✅ Ready |
+| `/auth` | Auth | ✅ Ready |
+| `/dashboard` | Dashboard | ✅ Ready |
+| `/profile` | ProfilePage | ✅ Routed |
+| `/board` | CollaborationBoard | ✅ Routed |
+| `/assistant` | ResearchAssistant | ✅ Routed |
+| `/paper-chat` | PaperChat | ✅ Routed |
+| `/cold-email` | ColdEmailGenerator | ✅ Routed |
 
 ---
 
@@ -38,83 +83,60 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 #### Week 1: Profile Enhancements & Publication Auto-Scraping
 
-**Task 1.1: Auto-scrape Publications from ORCID** ✅
+**Task 1.1: Auto-scrape Publications from ORCID** ✅ COMPLETED
 - **Priority**: High
 - **Status**: ✅ Completed
 - **Files Created/Modified**:
-  - ✅ `supabase/functions/scrape-publications/index.ts` (new Edge Function - combined with Semantic Scholar)
+  - ✅ `supabase/functions/scrape-publications/index.ts` (combined ORCID + Semantic Scholar)
   - ✅ `src/hooks/usePublications.tsx` (new hook)
   - ✅ `src/pages/ProfilePage.tsx` (publications tab added)
 
-- **Implementation Steps**:
-  1. Create Supabase Edge Function that calls ORCID API
-  2. Use ORCID API (https://pub.orcid.org/v3.0/) to fetch publications
-  3. Parse publication data and insert into `publications` table
-  4. Add "Sync Publications" button to profile page
-  5. Display publications in a dedicated tab on profile
+- **Implementation Details**:
+  - Uses ORCID Public API (https://pub.orcid.org/v3.0/)
+  - Fetches works by ORCID ID
+  - Transforms to publications format
+  - Prevents duplicates based on title, source, source_id
 
-- **Required API Keys**:
-  - ORCID API: Register at https://orcid.org/developer-tools (public API, no key needed for public data)
-
-- **Code Structure**:
-  ```typescript
-  // supabase/functions/scrape-orcid-publications/index.ts
-  // - Accept ORCID ID from user
-  // - Fetch works from ORCID API
-  // - Transform to publications format
-  // - Save to database
-  ```
-
-**Task 1.2: Auto-scrape Publications from Semantic Scholar** ✅
+**Task 1.2: Auto-scrape Publications from Semantic Scholar** ✅ COMPLETED
 - **Priority**: High
 - **Status**: ✅ Completed
-- **Implementation Steps**:
-  1. Create Edge Function for Semantic Scholar API
-  2. Use Semantic Scholar API (https://api.semanticscholar.org/api-docs/) to find publications by author name
-  3. Match publications to user profile
-  4. Store in `publications` table with `source: 'semantic_scholar'`
+- **Implementation**:
+  - Edge Function calls Semantic Scholar API by author name
+  - Returns publications with citation counts
+  - Stores in `publications` table with `source: 'semantic_scholar'`
 
-- **Required API Keys**:
-  - Semantic Scholar API: Free tier available (https://www.semanticscholar.org/product/api)
-
-**Task 1.3: Auto-scrape Publications from Google Scholar** ✅
+**Task 1.3: Auto-scrape Publications from Google Scholar**
 - **Priority**: Medium
-- **Status**: ✅ Documented (No implementation - API not available)
-- **Note**: ✅ Google Scholar doesn't have an official API. Manual profile linking is implemented; users are encouraged to use Semantic Scholar as primary source for auto-scraping.
+- **Status**: ✅ Documented (No implementation needed)
+- **Note**: Google Scholar doesn't have an official API. Manual profile linking is implemented; users are encouraged to use Semantic Scholar as primary source for auto-scraping.
 
-**Task 1.4: Display Publications on Profile** ✅
+**Task 1.4: Display Publications on Profile** ✅ COMPLETED
 - **Priority**: High
 - **Status**: ✅ Completed
-- **Implementation Steps**:
-  1. Add "Publications" tab to ProfilePage.tsx
-  2. Fetch publications using `usePublications` hook
-  3. Display in a card grid with filters (year, venue, type)
-  4. Show citation counts and links to full papers
+- **Implementation**:
+  - Publications tab in ProfilePage.tsx
+  - Fetches via `usePublications` hook
+  - Displays with year, venue, citation counts
+  - Links to full papers
 
 ---
 
 #### Week 2: Research Assistant API Integration
 
-**Task 2.1: Integrate Semantic Scholar API for Paper Discovery**
+**Task 2.1: Integrate Semantic Scholar API for Paper Discovery** ✅ COMPLETED
 - **Priority**: High
-- **Status**: Not Started
-- **Files to Modify**:
-  - `supabase/functions/ai-lab-assistant/index.ts` (enhance research_assistant type)
-  - `src/pages/ResearchAssistant.tsx` (may need minor updates)
+- **Status**: ✅ Completed
+- **Files Modified**:
+  - ✅ `supabase/functions/ai-lab-assistant/index.ts`
+  - ✅ `src/pages/ResearchAssistant.tsx`
 
-- **Implementation Steps**:
-  1. Modify Edge Function to accept `type: 'research_assistant'` with prompt
-  2. Call Semantic Scholar API to search papers by topic:
-     ```typescript
-     // Example: GET https://api.semanticscholar.org/graph/v1/paper/search?query=few-shot+learning
-     ```
-  3. Return top 10 most relevant papers with:
-     - Title, authors, abstract, year
-     - URL (Semantic Scholar link)
-     - Citation count
-     - Venue information
+- **Implementation Details**:
+  ```typescript
+  // searchSemanticScholar() function
+  // GET https://api.semanticscholar.org/graph/v1/paper/search?query={query}&limit=10&fields=title,authors,abstract,year,citationCount,venue,url,externalIds
+  ```
 
-- **Expected Output Structure**:
+- **Output Structure**:
   ```typescript
   {
     papers: [
@@ -125,58 +147,70 @@ This document outlines how to incorporate the remaining features from the PRD in
         year: number,
         url: string,
         citationCount: number,
-        venue: string
+        venue: string,
+        source: 'semantic_scholar'
       }
     ]
   }
   ```
 
-**Task 2.2: Integrate arXiv API for Additional Papers**
+**Task 2.2: Integrate arXiv API for Additional Papers** ✅ COMPLETED
 - **Priority**: Medium
-- **Status**: Not Started
-- **Implementation Steps**:
-  1. Call arXiv API (https://arxiv.org/help/api/user-manual) to search papers
-  2. Combine results with Semantic Scholar results
-  3. Deduplicate based on title similarity
-  4. Return top 10 combined results
-
-**Task 2.3: Integrate HuggingFace Datasets API**
-- **Priority**: Medium
-- **Status**: Not Started
-- **Files to Modify**:
-  - `supabase/functions/ai-lab-assistant/index.ts`
-
-- **Implementation Steps**:
-  1. Use HuggingFace Datasets API (https://huggingface.co/docs/datasets/) to search datasets
-  2. Search by keywords from research prompt
-  3. Return top 5-10 relevant datasets with:
-     - Name, description
-     - Dataset size and format
-     - Direct download link
-     - License information
-
-- **API Endpoint**:
+- **Status**: ✅ Completed
+- **Implementation Details**:
   ```typescript
-  // https://huggingface.co/api/datasets?search={query}
+  // searchArxiv() function
+  // GET https://export.arxiv.org/api/query?search_query=all:{query}&max_results=10&sortBy=relevance
+  // Parses XML response to extract papers
+  ```
+  - Combines results with Semantic Scholar
+  - Deduplicates based on normalized title
+  - Returns papers sorted by citation count
+
+**Task 2.3: Integrate HuggingFace Datasets API** ✅ COMPLETED
+- **Priority**: Medium
+- **Status**: ✅ Completed
+- **Implementation Details**:
+  ```typescript
+  // searchHuggingFaceDatasets() function
+  // GET https://huggingface.co/api/datasets?search={query}&limit=10&sort=downloads&direction=-1
   ```
 
-**Task 2.4: Enhance Project Ideas Generation**
-- **Priority**: Medium
-- **Status**: Partially Done (LLM generation exists, needs improvement)
-- **Implementation Steps**:
-  1. Use GPT-4/Claude to synthesize papers into project ideas
-  2. Ensure ideas are:
-     - Specific and actionable
-     - Based on gaps identified in literature review
-     - Include methodology suggestions
+- **Output Structure**:
+  ```typescript
+  {
+    datasets: [
+      {
+        name: string,
+        description: string,
+        url: string,  // https://huggingface.co/datasets/{id}
+        downloads: number,
+        likes: number
+      }
+    ]
+  }
+  ```
 
-**Task 2.5: Improve Paper Outline Generation**
+**Task 2.4: Enhance Project Ideas Generation** ✅ COMPLETED
+- **Priority**: Medium
+- **Status**: ✅ Completed
+- **Implementation Details**:
+  - `generateProjectIdeasAndOutline()` function
+  - Uses LLM to synthesize papers into project ideas
+  - Each idea includes:
+    - Title (concise)
+    - Description (2-3 sentences)
+    - Methodology suggestion
+  - Generates paper outline with 6-8 sections
+  - Recommends relevant libraries/tools
+
+**Task 2.5: Improve Paper Outline Generation** ✅ COMPLETED
 - **Priority**: Low
-- **Status**: Partially Done
-- **Implementation Steps**:
-  1. Enhance LLM prompt to generate more detailed outlines
-  2. Include subsection breakdowns
-  3. Suggest specific papers to cite in each section
+- **Status**: ✅ Completed (included in Task 2.4)
+- **Implementation**:
+  - LLM generates detailed outlines
+  - Each section has title and description
+  - Structured for academic papers
 
 ---
 
@@ -184,10 +218,10 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 3.1: Implement PDF Processing Pipeline**
 - **Priority**: High
-- **Status**: Partially Done (upload works, processing missing)
+- **Status**: ❌ Not Started
 - **Files to Create/Modify**:
   - `supabase/functions/process-paper/index.ts` (new Edge Function)
-  - Background job trigger for processing
+  - Database trigger for auto-processing
 
 - **Implementation Steps**:
   1. Create Edge Function that:
@@ -213,13 +247,13 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 - **Required Libraries** (for Edge Function):
   - `pdf-parse` or use a PDF processing service
-  - OpenAI API for embeddings
+  - OpenAI API for embeddings (or Lovable gateway)
 
 **Task 3.2: Implement RAG Query System**
 - **Priority**: High
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Files to Modify**:
-  - `supabase/functions/ai-lab-assistant/index.ts` (enhance paper_chat type)
+  - `supabase/functions/ai-lab-assistant/index.ts` (add paper_chat type handler)
 
 - **Implementation Steps**:
   1. When user sends message in Paper Chat:
@@ -233,10 +267,10 @@ This document outlines how to incorporate the remaining features from the PRD in
        LIMIT 5
        ```
      - Retrieve top 5 most relevant chunks
-     - Pass chunks as context to LLM (GPT-4 or Claude)
+     - Pass chunks as context to LLM
      - Generate response with citations to page numbers
 
-  2. Update Edge Function to handle `type: 'paper_chat'`:
+  2. Add handler in Edge Function:
      ```typescript
      if (body.type === 'paper_chat') {
        const queryEmbedding = await generateEmbedding(body.message);
@@ -261,7 +295,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 3.4: Add Paper Metadata Extraction**
 - **Priority**: Low
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Implementation Steps**:
   1. Extract title, authors, abstract from PDF
   2. Store in `papers.metadata` JSONB field
@@ -313,7 +347,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 4.2: Batch Match Scoring**
 - **Priority**: Medium
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Implementation Steps**:
   1. Create background job to calculate matches for all students when new post is created
   2. Store results in `match_scores` table
@@ -321,7 +355,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 4.3: Match Score Dashboard**
 - **Priority**: Medium
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Implementation Steps**:
   1. Add "Recommended Matches" section to dashboard
   2. Show top 5 matches for user's profile
@@ -330,11 +364,41 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 ---
 
-#### Week 5: External API Integrations
+#### Week 5: Cold Email Generator Backend
 
-**Task 5.1: Mapbox Integration for Location Services**
+**Task 5.1: Implement Cold Email Generation**
+- **Priority**: High
+- **Status**: UI exists, needs backend
+- **Files to Modify**:
+  - `supabase/functions/ai-lab-assistant/index.ts` (add cold_email type)
+  - `src/pages/ColdEmailGenerator.tsx` (connect to API)
+
+- **Implementation Steps**:
+  1. Add `type: 'cold_email'` handler in Edge Function:
+     ```typescript
+     if (body.type === 'cold_email') {
+       // Optionally fetch recipient's research from Semantic Scholar
+       const recipientInfo = body.recipient_name
+         ? await searchSemanticScholar(body.recipient_name, 3)
+         : null;
+
+       const emailPrompt = buildEmailPrompt({
+         senderProfile: body.sender_profile,
+         recipientInfo,
+         tone: body.tone, // formal, friendly, etc.
+         context: body.context
+       });
+
+       const email = await generateWithLLM(emailPrompt);
+       return { subject: email.subject, body: email.body };
+     }
+     ```
+  2. Save generated emails to `cold_emails` table
+  3. Add email history view in UI
+
+**Task 5.2: Mapbox Integration for Location Services**
 - **Priority**: Low
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Use Cases**:
   - Location-based search in collaboration board
   - Proximity scoring in matchmaking
@@ -345,14 +409,6 @@ This document outlines how to incorporate the remaining features from the PRD in
   2. Add Mapbox React components
   3. Geocode location strings to coordinates
   4. Calculate distances between locations
-
-**Task 5.2: Google Scholar Profile Integration (Optional)**
-- **Priority**: Low
-- **Status**: Not Started
-- **Note**: Google Scholar doesn't have an official API. Consider:
-  - Manual profile linking (already implemented)
-  - Web scraping with user consent (legally complex)
-  - Focus on Semantic Scholar and ORCID instead
 
 ---
 
@@ -393,18 +449,17 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 7.1: Implement Real-time Messaging**
 - **Priority**: Low (Stretch Goal)
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Tech Stack Options**:
   - Supabase Realtime (recommended - already using Supabase)
   - Socket.io with separate WebSocket server
   - Pusher or similar service
 
 - **Implementation Steps**:
-  1. Create `messages` table (if not exists) with:
+  1. Use existing `messages` table with:
      - sender_id, recipient_id
-     - conversation_id
-     - content, timestamp
-     - read status
+     - application_id (optional)
+     - body, timestamp
   2. Set up Supabase Realtime subscriptions:
      ```typescript
      const channel = supabase
@@ -424,7 +479,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 7.2: Professor-Student Chat Interface**
 - **Priority**: Low
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Implementation Steps**:
   1. Add "Messages" page to dashboard
   2. Show conversations list
@@ -438,7 +493,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 8.1: Calendar Integration**
 - **Priority**: Low (Stretch Goal)
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Implementation Steps**:
   1. Integrate Google Calendar API or CalDAV
   2. Create `research_timelines` table:
@@ -451,7 +506,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 8.2: Research Timeline Planner**
 - **Priority**: Low
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Implementation Steps**:
   1. Create timeline UI component
   2. Allow users to create research projects
@@ -465,7 +520,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 9.1: Collaborative Document Editor**
 - **Priority**: Low (Stretch Goal)
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Tech Stack Options**:
   - TipTap or Slate.js (React-based editors)
   - Integration with Google Docs API
@@ -486,7 +541,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 9.2: Integration with Notion/Obsidian**
 - **Priority**: Low
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Implementation Steps**:
   1. Create export functionality:
      - Export research roadmap to Notion page
@@ -501,7 +556,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 10.1: Q&A Board / Mentor AMA**
 - **Priority**: Low (Stretch Goal)
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Implementation Steps**:
   1. Create `questions` and `answers` tables:
      - questions: title, body, author_id, tags[], upvotes
@@ -518,7 +573,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 
 **Task 10.2: Community Forums**
 - **Priority**: Low
-- **Status**: Not Started
+- **Status**: ❌ Not Started
 - **Implementation Steps**:
   1. Create forum structure:
      - Categories (by research field)
@@ -540,7 +595,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 2. **Semantic Scholar API**
    - Sign up at: https://www.semanticscholar.org/product/api
    - Free tier: 100 requests/min
-   - Add to Supabase secrets: `SEMANTIC_SCHOLAR_API_KEY`
+   - Add to Supabase secrets: `SEMANTIC_SCHOLAR_API_KEY` (optional, for higher limits)
 
 3. **arXiv API** (Public - No key needed)
    - Documentation: https://arxiv.org/help/api/user-manual
@@ -550,30 +605,59 @@ This document outlines how to incorporate the remaining features from the PRD in
    - Documentation: https://huggingface.co/docs/datasets/
    - No authentication required for public datasets
 
-5. **OpenAI API** (For embeddings and LLM)
-   - Already configured via Lovable API Gateway
-   - For direct use: Add `OPENAI_API_KEY` to Supabase secrets
+5. **OpenAI API** (For LLM features) ✅
+   - Sign up at: https://platform.openai.com/
+   - Add to Supabase secrets: `OPENAI_API_KEY`
+   - Model: `gpt-4o-mini` (used for all LLM features)
+   - Also needed for embeddings in RAG implementation
 
-6. **Mapbox API** (Optional - for location features)
+7. **Mapbox API** (Optional - for location features)
    - Sign up at: https://www.mapbox.com/
    - Free tier: 50,000 map loads/month
    - Add to env: `VITE_MAPBOX_TOKEN`
 
-### Database Migrations Needed
+### Database Schema
 
-Create new migration file: `supabase/migrations/YYYYMMDDHHMMSS_additional_features.sql`
+All tables defined in migrations and TypeScript types:
 
 ```sql
--- Add any missing columns or indexes
--- Ensure pgvector extension is enabled for embeddings
-CREATE EXTENSION IF NOT EXISTS vector;
+-- Core tables (already exist)
+profiles, user_roles, lab_posts, applications, messages
 
+-- Publication tables
+linked_profiles (platform, url, username, verified)
+publications (title, authors, venue, year, doi, citation_count, source)
+
+-- Paper/RAG tables
+papers (title, filename, file_url, processed, metadata)
+paper_chunks (paper_id, chunk_text, embedding, page_number)
+paper_conversations (paper_id, user_id, title)
+paper_messages (conversation_id, role, content, chunks_used)
+
+-- AI feature tables
+research_assistant_outputs (prompt, topic, papers, project_ideas, outline, datasets, libraries)
+cold_emails (recipient_name, subject, body, tone, context)
+match_scores (student_id, post_id, overall_score, explanation)
+```
+
+### Database Indexes Recommended
+
+```sql
 -- Add indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_publications_user_year 
+CREATE INDEX IF NOT EXISTS idx_publications_user_year
 ON public.publications(user_id, year DESC);
 
-CREATE INDEX IF NOT EXISTS idx_papers_metadata 
-ON public.papers USING gin(metadata);
+CREATE INDEX IF NOT EXISTS idx_papers_user
+ON public.papers(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_paper_chunks_paper
+ON public.paper_chunks(paper_id);
+
+CREATE INDEX IF NOT EXISTS idx_match_scores_student
+ON public.match_scores(student_id, overall_score DESC);
+
+CREATE INDEX IF NOT EXISTS idx_match_scores_post
+ON public.match_scores(post_id, overall_score DESC);
 ```
 
 ### Environment Variables
@@ -590,9 +674,45 @@ VITE_MAPBOX_TOKEN=...
 ```
 
 Add to Supabase Edge Function secrets (via dashboard):
-- `SEMANTIC_SCHOLAR_API_KEY`
-- `OPENAI_API_KEY` (if using directly)
-- `LOVABLE_API_KEY` (already configured)
+- `OPENAI_API_KEY` (required for AI features)
+- `SEMANTIC_SCHOLAR_API_KEY` (optional, for higher rate limits)
+
+---
+
+## File Structure
+
+```
+src/
+├── pages/
+│   ├── Index.tsx              # Landing page
+│   ├── Auth.tsx               # Authentication
+│   ├── Dashboard.tsx          # Main hub
+│   ├── ProfilePage.tsx        # Profile + publications ✅
+│   ├── CollaborationBoard.tsx # Browse opportunities
+│   ├── ResearchAssistant.tsx  # AI research helper ✅
+│   ├── PaperChat.tsx          # Chat with papers (needs RAG)
+│   ├── ColdEmailGenerator.tsx # Email drafting (needs backend)
+│   └── NotFound.tsx           # 404 page
+├── hooks/
+│   ├── useAuth.tsx            # Authentication hook
+│   ├── useProfile.tsx         # Profile management
+│   └── usePublications.tsx    # Publications sync ✅
+└── integrations/
+    └── supabase/
+        ├── client.ts          # Supabase client
+        └── types.ts           # Database types (all 14 tables) ✅
+
+supabase/
+├── functions/
+│   ├── ai-lab-assistant/      # Main AI function ✅
+│   │   └── index.ts           # Handles research_assistant, chat, (todo: paper_chat, cold_email)
+│   ├── ai-match-score/        # Match scoring
+│   │   └── index.ts           # Basic LLM scoring
+│   └── scrape-publications/   # Publication sync ✅
+│       └── index.ts           # ORCID + Semantic Scholar
+└── migrations/
+    └── *.sql                  # Database schema
+```
 
 ---
 
@@ -633,7 +753,7 @@ Add to Supabase Edge Function secrets (via dashboard):
    - Batch API requests when possible
 
 4. **Database Optimization**:
-   - Add appropriate indexes (already partially done)
+   - Add appropriate indexes (see above)
    - Use pagination for large result sets
    - Consider materialized views for expensive queries
 
@@ -656,21 +776,37 @@ Before deploying new features:
 
 ## Priority Ranking
 
-**Must Have (P0)** - Blocking MVP completion:
-1. Publication auto-scraping (ORCID, Semantic Scholar)
-2. Research Assistant API integration
+**Must Have (P0)** - Core MVP:
+1. ~~Publication auto-scraping (ORCID, Semantic Scholar)~~ ✅
+2. ~~Research Assistant API integration~~ ✅
 3. RAG implementation for Paper Chat
+4. Cold Email Generator backend
 
 **Should Have (P1)** - Important for full functionality:
-4. Enhanced matchmaking algorithm
-5. Dataset integration (HuggingFace)
+5. Enhanced matchmaking algorithm
 6. Advanced search filters
+7. Public profile views
 
 **Nice to Have (P2)** - Stretch goals:
-7. Real-time chat
-8. Calendar sync
-9. Collaborative editor
-10. Community Q&A
+8. Real-time chat
+9. Calendar sync
+10. Collaborative editor
+11. Community Q&A
+
+---
+
+## Recent Changes (January 2026)
+
+- ✅ **Migrated from Lovable AI Gateway to OpenAI** (gpt-4o-mini)
+- ✅ Implemented Semantic Scholar API integration (paper search)
+- ✅ Implemented arXiv API integration (preprint search)
+- ✅ Implemented HuggingFace Datasets API integration
+- ✅ Enhanced project ideas generation with LLM (includes methodology)
+- ✅ Added all missing page routes to App.tsx
+- ✅ Added TypeScript types for all 14 database tables
+- ✅ Updated profiles table types (degree_status, orcid_id, google_scholar_id)
+- ✅ Papers deduplicated and sorted by citation count
+- ✅ Research Assistant UI updated to show citations, venue, methodology
 
 ---
 
@@ -692,4 +828,4 @@ Before deploying new features:
 - Use existing Supabase infrastructure (Realtime, Storage, Edge Functions) where possible
 - Consider using LangChain or LlamaIndex if RAG complexity grows
 - For production, consider adding monitoring (Sentry, LogRocket) and analytics
-
+- Using OpenAI `gpt-4o-mini` for cost-effective LLM features

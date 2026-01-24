@@ -7,6 +7,11 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import ProfilePage from "./pages/ProfilePage";
+import CollaborationBoard from "./pages/CollaborationBoard";
+import ResearchAssistant from "./pages/ResearchAssistant";
+import PaperChat from "./pages/PaperChat";
+import ColdEmailGenerator from "./pages/ColdEmailGenerator";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +27,11 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/board" element={<CollaborationBoard />} />
+            <Route path="/assistant" element={<ResearchAssistant />} />
+            <Route path="/paper-chat" element={<PaperChat />} />
+            <Route path="/cold-email" element={<ColdEmailGenerator />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
