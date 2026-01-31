@@ -22,14 +22,17 @@ This document outlines how to incorporate the remaining features from the PRD in
 - **All page routes configured** ✅
 - **TypeScript types for all 14 database tables** ✅
 
+### ✅ Recently Completed (Tasks 3.1–3.4 + Repo Fixes)
+- **ScholarGPT (Paper Chat)**: ✅ Full RAG pipeline (process-paper PDF → chunks → embeddings, paper_chat handler with vector search, UI: processing status, page citations, View Source, new conversation)
+- **Cold Email Generator**: ✅ Backend handler in `ai-lab-assistant` (type: `cold_email`), optional Semantic Scholar context
+- **TypeScript types**: ✅ `cold_emails` and `papers` in `types.ts` aligned with migration (recipient_id, recipient_type, context as Json, uploaded_at, file_size)
+- **RPC**: ✅ `match_paper_chunks(paper_id, query_embedding, match_count)` for vector similarity search
+
 ### 🟡 Partially Implemented (Needs Enhancement)
-- **Smart Matchmaking**: Edge function exists, UI ready, but not fully connected to frontend
-- **ScholarGPT (Paper Chat)**: UI exists, but RAG system not fully implemented
-- **Cold Email Generator**: UI exists, needs AI integration
+- **Smart Matchmaking**: Edge function exists, UI ready, but frontend does not invoke `ai-match-score` to populate scores
 - **Profile Page**: UI complete, publications tab works, linked profiles partial
 
 ### ❌ Not Yet Implemented
-- Full RAG implementation for paper processing
 - Real-time professor-student chat
 - Calendar sync and timeline planning
 - Collaborative document editor
@@ -43,9 +46,10 @@ This document outlines how to incorporate the remaining features from the PRD in
 ### AI Provider: OpenAI
 The project uses OpenAI directly for LLM features:
 - **Model**: `gpt-4o-mini` (fast, cost-effective)
-- **Used in**: `ai-lab-assistant`, `ai-match-score` edge functions
+- **Embeddings**: `text-embedding-3-small` (1536 dimensions) for RAG (process-paper, paper_chat)
+- **Used in**: `ai-lab-assistant`, `ai-match-score`, `process-paper` edge functions
 - **Requires**: `OPENAI_API_KEY` environment variable
-- **Endpoint**: `https://api.openai.com/v1/chat/completions`
+- **Endpoints**: `https://api.openai.com/v1/chat/completions`, `https://api.openai.com/v1/embeddings`
 
 ### External APIs Integrated
 | API | Status | Purpose | Rate Limits |
@@ -216,90 +220,43 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 
 #### Week 3: ScholarGPT RAG Implementation
 
-**Task 3.1: Implement PDF Processing Pipeline**
+**Task 3.1: Implement PDF Processing Pipeline** ✅ COMPLETED
 - **Priority**: High
-- **Status**: ❌ Not Started
-- **Files to Create/Modify**:
-  - `supabase/functions/process-paper/index.ts` (new Edge Function)
-  - Database trigger for auto-processing
+- **Status**: ✅ Completed
+- **Files Created/Modified**:
+  - ✅ `supabase/functions/process-paper/index.ts` (new Edge Function)
+  - Processing is triggered by the frontend after upload (no DB trigger; optional later via Supabase Webhooks or pg_net)
 
-- **Implementation Steps**:
-  1. Create Edge Function that:
-     - Accepts paper_id
-     - Downloads PDF from Supabase Storage
-     - Extracts text using PDF parsing library (pdf-parse or pdfjs-dist)
-     - Chunks text into smaller pieces (500-1000 tokens each)
-     - Generates embeddings using OpenAI Embeddings API
-     - Stores chunks in `paper_chunks` table with embeddings
+- **Implementation**:
+  - Edge Function accepts `paper_id`, fetches paper `file_url`, downloads PDF
+  - Extracts text via pdfjs-dist (esm.sh), chunks (~2400 chars with overlap), generates embeddings (OpenAI `text-embedding-3-small`)
+  - Inserts into `paper_chunks`, updates `papers.processed`, `page_count`, `metadata`
+  - Frontend calls `supabase.functions.invoke('process-paper', { body: { paper_id } })` after upload and shows "Processing..." until done
 
-  2. Set up database trigger or webhook to auto-process on upload:
-     ```sql
-     -- Create function to trigger processing
-     CREATE OR REPLACE FUNCTION trigger_paper_processing()
-     RETURNS TRIGGER AS $$
-     BEGIN
-       -- Call Edge Function via HTTP (or use Supabase Webhooks)
-       PERFORM net.http_post(...);
-       RETURN NEW;
-     END;
-     $$ LANGUAGE plpgsql;
-     ```
-
-- **Required Libraries** (for Edge Function):
-  - `pdf-parse` or use a PDF processing service
-  - OpenAI API for embeddings (or Lovable gateway)
-
-**Task 3.2: Implement RAG Query System**
+**Task 3.2: Implement RAG Query System** ✅ COMPLETED
 - **Priority**: High
-- **Status**: ❌ Not Started
-- **Files to Modify**:
-  - `supabase/functions/ai-lab-assistant/index.ts` (add paper_chat type handler)
+- **Status**: ✅ Completed
+- **Files Modified**:
+  - ✅ `supabase/functions/ai-lab-assistant/index.ts` (added `paper_chat` handler, `generateEmbedding`, `handlePaperChat`)
+  - ✅ `supabase/migrations/20250130000000_match_paper_chunks_rpc.sql` (RPC for vector search)
 
-- **Implementation Steps**:
-  1. When user sends message in Paper Chat:
-     - Generate embedding for user query
-     - Perform vector similarity search in `paper_chunks` table:
-       ```sql
-       SELECT chunk_text, chunk_index, page_number
-       FROM paper_chunks
-       WHERE paper_id = $1
-       ORDER BY embedding <=> $2::vector
-       LIMIT 5
-       ```
-     - Retrieve top 5 most relevant chunks
-     - Pass chunks as context to LLM
-     - Generate response with citations to page numbers
+- **Implementation**:
+  - `body.type === 'paper_chat'`: generate query embedding, call `match_paper_chunks(paper_id, query_embedding, 5)`, build context with page numbers, call LLM, return `{ response, chunks_used, chunks }` (chunks include `page_number`, `chunk_text` for UI)
 
-  2. Add handler in Edge Function:
-     ```typescript
-     if (body.type === 'paper_chat') {
-       const queryEmbedding = await generateEmbedding(body.message);
-       const relevantChunks = await findRelevantChunks(
-         body.paper_id,
-         queryEmbedding
-       );
-       const context = relevantChunks.map(c => c.chunk_text).join('\n\n');
-       const response = await callLLM(context, body.message);
-       return { response, chunks_used: relevantChunks.map(c => c.id) };
-     }
-     ```
-
-**Task 3.3: Enhance Paper Chat UI**
+**Task 3.3: Enhance Paper Chat UI** ✅ COMPLETED
 - **Priority**: Medium
-- **Status**: Basic UI exists
-- **Implementation Steps**:
-  1. Show processing status with progress indicator
-  2. Display page number citations in responses
-  3. Add "View Source" button to see which chunks were used
-  4. Add ability to start new conversation thread per paper
+- **Status**: ✅ Completed
+- **Implementation**:
+  - Processing status: "Processing..." badge and polling until `paper.processed`
+  - Page citations in assistant messages (Sources: pages X, Y)
+  - "View sources" / "Hide sources" button to expand chunk excerpts
+  - "New conversation" button to start a new thread per paper
 
-**Task 3.4: Add Paper Metadata Extraction**
+**Task 3.4: Add Paper Metadata Extraction** ✅ COMPLETED
 - **Priority**: Low
-- **Status**: ❌ Not Started
-- **Implementation Steps**:
-  1. Extract title, authors, abstract from PDF
-  2. Store in `papers.metadata` JSONB field
-  3. Auto-populate paper title if missing
+- **Status**: ✅ Completed
+- **Implementation**:
+  - In `process-paper`: `extractMetadataFromText(fullText)` derives title/abstract from first pages; stored in `papers.metadata`; paper title updated if extracted
 
 ---
 
@@ -636,8 +593,11 @@ paper_messages (conversation_id, role, content, chunks_used)
 
 -- AI feature tables
 research_assistant_outputs (prompt, topic, papers, project_ideas, outline, datasets, libraries)
-cold_emails (recipient_name, subject, body, tone, context)
+cold_emails (recipient_id, recipient_type, recipient_name, subject, body, tone, context)
 match_scores (student_id, post_id, overall_score, explanation)
+
+-- RPC for RAG (migration 20250130000000_match_paper_chunks_rpc.sql)
+match_paper_chunks(p_paper_id, p_query_embedding vector(1536), p_match_count) → chunks
 ```
 
 ### Database Indexes Recommended
@@ -690,8 +650,8 @@ src/
 │   ├── ProfilePage.tsx        # Profile + publications ✅
 │   ├── CollaborationBoard.tsx # Browse opportunities
 │   ├── ResearchAssistant.tsx  # AI research helper ✅
-│   ├── PaperChat.tsx          # Chat with papers (needs RAG)
-│   ├── ColdEmailGenerator.tsx # Email drafting (needs backend)
+│   ├── PaperChat.tsx          # Chat with papers (RAG) ✅
+│   ├── ColdEmailGenerator.tsx # Email drafting (backend) ✅
 │   └── NotFound.tsx           # 404 page
 ├── hooks/
 │   ├── useAuth.tsx            # Authentication hook
@@ -705,13 +665,15 @@ src/
 supabase/
 ├── functions/
 │   ├── ai-lab-assistant/      # Main AI function ✅
-│   │   └── index.ts           # Handles research_assistant, chat, (todo: paper_chat, cold_email)
+│   │   └── index.ts           # Handles research_assistant, cold_email, paper_chat, chat
 │   ├── ai-match-score/        # Match scoring
 │   │   └── index.ts           # Basic LLM scoring
+│   ├── process-paper/         # PDF → chunks + embeddings ✅
+│   │   └── index.ts           # PDF extract, chunk, embed, metadata
 │   └── scrape-publications/   # Publication sync ✅
 │       └── index.ts           # ORCID + Semantic Scholar
 └── migrations/
-    └── *.sql                  # Database schema
+    └── *.sql                  # Database schema (+ match_paper_chunks RPC)
 ```
 
 ---
@@ -779,8 +741,8 @@ Before deploying new features:
 **Must Have (P0)** - Core MVP:
 1. ~~Publication auto-scraping (ORCID, Semantic Scholar)~~ ✅
 2. ~~Research Assistant API integration~~ ✅
-3. RAG implementation for Paper Chat
-4. Cold Email Generator backend
+3. ~~RAG implementation for Paper Chat~~ ✅
+4. ~~Cold Email Generator backend~~ ✅
 
 **Should Have (P1)** - Important for full functionality:
 5. Enhanced matchmaking algorithm
@@ -807,6 +769,9 @@ Before deploying new features:
 - ✅ Updated profiles table types (degree_status, orcid_id, google_scholar_id)
 - ✅ Papers deduplicated and sorted by citation count
 - ✅ Research Assistant UI updated to show citations, venue, methodology
+- ✅ **ScholarGPT RAG (Tasks 3.1–3.4)**: process-paper Edge Function (PDF → chunks + embeddings), match_paper_chunks RPC, paper_chat handler in ai-lab-assistant, Paper Chat UI (processing status, page citations, View sources, New conversation), paper metadata extraction
+- ✅ **Cold Email backend**: `cold_email` handler in ai-lab-assistant with optional Semantic Scholar context
+- ✅ **Repo fixes**: `cold_emails` and `papers` TypeScript types aligned with migration (recipient_id, recipient_type, context Json, uploaded_at, file_size)
 
 ---
 

@@ -14,7 +14,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Upload, Send, FileText, X, Loader2, MessageSquare } from 'lucide-react';
+import { BookOpen, Upload, Send, FileText, X, Loader2, MessageSquare, PlusCircle, FileSearch } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -26,11 +26,19 @@ interface Paper {
   processed: boolean;
 }
 
+interface ChunkSource {
+  id: string;
+  page_number: number | null;
+  chunk_text: string;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
+  chunks_used?: string[];
+  chunks?: ChunkSource[];
 }
 
 const PaperChat = () => {
@@ -43,7 +51,10 @@ const PaperChat = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [processingPaperId, setProcessingPaperId] = useState<string | null>(null);
+  const [viewSourceMessageId, setViewSourceMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -54,6 +65,24 @@ const PaperChat = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Poll papers when one is processing
+  useEffect(() => {
+    if (!processingPaperId || !user) return;
+    const interval = setInterval(() => loadPapers(), 5000);
+    pollIntervalRef.current = interval;
+    return () => {
+      clearInterval(interval);
+      pollIntervalRef.current = null;
+    };
+  }, [processingPaperId, user]);
+
+  // Clear processing state when paper becomes processed
+  useEffect(() => {
+    if (!processingPaperId) return;
+    const paper = papers.find((p) => p.id === processingPaperId);
+    if (paper?.processed) setProcessingPaperId(null);
+  }, [papers, processingPaperId]);
 
   const loadPapers = async () => {
     if (!user?.id) return;
@@ -118,14 +147,23 @@ const PaperChat = () => {
 
       if (error) throw error;
 
-      toast.success('Paper uploaded successfully! Processing...');
+      toast.success('Paper uploaded. Processing for RAG...');
       await loadPapers();
       setSelectedPaper(data);
+      setProcessingPaperId(data.id);
 
-      // Trigger processing (in production, this would be a background job)
-      setTimeout(() => {
-        toast.info('Paper processing will happen in the background');
-      }, 1000);
+      // Trigger PDF processing and embedding pipeline
+      supabase.functions.invoke('process-paper', { body: { paper_id: data.id } }).then(({ error: processError }) => {
+        if (processError) {
+          console.error('process-paper error:', processError);
+          toast.error('Processing failed. You can try again later.');
+        }
+        setProcessingPaperId(null);
+        loadPapers();
+      }).catch(() => {
+        setProcessingPaperId(null);
+        loadPapers();
+      });
     } catch (error: any) {
       toast.error('Failed to upload paper');
       console.error(error);
@@ -140,6 +178,7 @@ const PaperChat = () => {
     setSelectedPaper(paper);
     setMessages([]);
     setConversationId(null);
+    setViewSourceMessageId(null);
 
     try {
       // Check for existing conversation
@@ -154,7 +193,7 @@ const PaperChat = () => {
 
       if (existingConv) {
         setConversationId(existingConv.id);
-        // Load messages
+        // Load messages (chunks not stored in DB)
         const { data: msgs } = await supabase
           .from('paper_messages')
           .select('*')
@@ -162,12 +201,26 @@ const PaperChat = () => {
           .order('created_at', { ascending: true });
 
         if (msgs) {
-          setMessages(msgs);
+          setMessages(msgs.map((m): Message => ({
+            id: m.id,
+            role: m.role === 'user' || m.role === 'assistant' ? m.role : 'user',
+            content: m.content,
+            created_at: m.created_at,
+            chunks_used: m.chunks_used ?? undefined,
+            chunks: undefined,
+          })));
         }
       }
     } catch (error: any) {
       console.error('Failed to load conversation:', error);
     }
+  };
+
+  const startNewConversation = () => {
+    setConversationId(null);
+    setMessages([]);
+    setViewSourceMessageId(null);
+    toast.success('Started a new conversation');
   };
 
   const handleSendMessage = async () => {
@@ -235,6 +288,8 @@ const PaperChat = () => {
         role: 'assistant',
         content: aiResponse.response || 'I apologize, but I could not process your question. Please try again.',
         created_at: new Date().toISOString(),
+        chunks_used: aiResponse.chunks_used || [],
+        chunks: aiResponse.chunks || [],
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -334,11 +389,16 @@ const PaperChat = () => {
                               {new Date(paper.uploaded_at).toLocaleDateString()}
                             </p>
                           </div>
-                          {paper.processed && (
+                          {processingPaperId === paper.id ? (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Processing...
+                            </Badge>
+                          ) : paper.processed ? (
                             <Badge variant="secondary" className="text-xs">
                               Ready
                             </Badge>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     ))
@@ -365,17 +425,23 @@ const PaperChat = () => {
                         Ask questions about this paper
                       </CardDescription>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedPaper(null);
-                        setMessages([]);
-                        setConversationId(null);
-                      }}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="outline" size="sm" onClick={startNewConversation}>
+                        <PlusCircle className="w-4 h-4 mr-1" />
+                        New conversation
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPaper(null);
+                          setMessages([]);
+                          setConversationId(null);
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col p-0">
@@ -405,6 +471,35 @@ const PaperChat = () => {
                               }`}
                             >
                               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                              {msg.role === 'assistant' && msg.chunks && msg.chunks.length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-border/50">
+                                  <p className="text-xs text-muted-foreground mb-1">
+                                    Sources: pages{' '}
+                                    {[...new Set((msg.chunks || []).map((c) => c.page_number).filter(Boolean))].join(', ')}
+                                  </p>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() =>
+                                      setViewSourceMessageId(viewSourceMessageId === msg.id ? null : msg.id)
+                                    }
+                                  >
+                                    <FileSearch className="w-3 h-3 mr-1" />
+                                    {viewSourceMessageId === msg.id ? 'Hide sources' : 'View sources'}
+                                  </Button>
+                                  {viewSourceMessageId === msg.id && (
+                                    <div className="mt-2 space-y-2 max-h-48 overflow-y-auto text-xs text-muted-foreground">
+                                      {(msg.chunks || []).map((c, i) => (
+                                        <div key={c.id} className="p-2 rounded bg-background/50">
+                                          <span className="font-medium">Page {c.page_number ?? '?'}</span>
+                                          <p className="mt-1 line-clamp-3">{c.chunk_text}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))

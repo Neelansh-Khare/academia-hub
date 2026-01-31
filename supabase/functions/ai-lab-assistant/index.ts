@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -327,6 +328,176 @@ Respond ONLY with valid JSON, no markdown code blocks.`;
 }
 
 // ============================================
+// Cold Email Generation
+// ============================================
+
+async function handleColdEmail(
+  body: {
+    recipient_type: string;
+    recipient_name: string;
+    recipient_email?: string;
+    opportunity_context?: string;
+    tone?: string;
+    user_profile?: Record<string, unknown> | null;
+  },
+  apiKey: string
+): Promise<{ subject: string; body: string }> {
+  const { recipient_type, recipient_name, opportunity_context, tone = 'formal', user_profile } = body;
+
+  // Optionally fetch recipient's research from Semantic Scholar
+  let recipientResearch = '';
+  if (recipient_name) {
+    const papers = await searchSemanticScholar(recipient_name, 3);
+    if (papers.length > 0) {
+      recipientResearch = `Recipient's recent work (from Semantic Scholar):\n${papers.map(p => `- "${p.title}" (${p.year})`).join('\n')}`;
+    }
+  }
+
+  const profileSummary = user_profile
+    ? `Sender profile: ${JSON.stringify({
+        full_name: (user_profile as any).full_name,
+        headline: (user_profile as any).headline,
+        institution: (user_profile as any).institution,
+        research_fields: (user_profile as any).research_fields,
+        bio: (user_profile as any).bio ? String((user_profile as any).bio).slice(0, 200) : '',
+      }, null, 2)}`
+    : '';
+
+  const systemPrompt = `You are an expert at writing professional academic cold emails. Generate a single email with a clear subject line and body. Tone: ${tone}. Be concise, specific, and respectful. Do not use placeholders like [Name] - use the actual recipient name.`;
+
+  const userPrompt = `Write a cold email for a researcher to reach out to a ${recipient_type} named ${recipient_name}.
+${profileSummary}
+${recipientResearch ? '\n' + recipientResearch : ''}
+${opportunity_context ? `Context/opportunity: ${opportunity_context}` : ''}
+
+Respond with valid JSON only: { "subject": "...", "body": "..." }. Body can use \\n for new lines. No other text.`;
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('OpenAI cold email error:', response.status, errText);
+    throw new Error('OpenAI API error');
+  }
+
+  const data = await response.json();
+  const content = (data.choices?.[0]?.message?.content || '').trim();
+  let jsonStr = content;
+  if (jsonStr.startsWith('```')) {
+    jsonStr = jsonStr.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
+  }
+  const parsed = JSON.parse(jsonStr);
+  return {
+    subject: parsed.subject || 'Research Opportunity Inquiry',
+    body: parsed.body || '',
+  };
+}
+
+// ============================================
+// Paper Chat RAG: Embedding + vector search
+// ============================================
+
+async function generateEmbedding(text: string, apiKey: string): Promise<number[]> {
+  const response = await fetch("https://api.openai.com/v1/embeddings", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "text-embedding-3-small",
+      input: text.slice(0, 8191),
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('OpenAI embeddings error:', response.status, errText);
+    throw new Error('OpenAI embeddings error');
+  }
+
+  const data = await response.json();
+  const embedding = data.data?.[0]?.embedding;
+  if (!Array.isArray(embedding)) throw new Error('Invalid embedding response');
+  return embedding;
+}
+
+async function handlePaperChat(
+  body: { paper_id: string; message: string },
+  apiKey: string
+): Promise<{ response: string; chunks_used: string[]; chunks?: { id: string; page_number: number | null; chunk_text: string }[] }> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  const queryEmbedding = await generateEmbedding(body.message, apiKey);
+  // pgvector expects string format "[0.1, 0.2, ...]" for RPC
+  const embeddingStr = `[${queryEmbedding.join(',')}]`;
+
+  const { data: chunks, error: rpcError } = await supabase.rpc('match_paper_chunks', {
+    p_paper_id: body.paper_id,
+    p_query_embedding: embeddingStr,
+    p_match_count: 5,
+  });
+
+  if (rpcError) {
+    console.error('match_paper_chunks RPC error:', rpcError);
+  }
+
+  const chunkList = (chunks || []) as { id: string; chunk_text: string; chunk_index: number; page_number: number | null }[];
+  const context = chunkList.length > 0
+    ? chunkList.map(c => `[Page ${c.page_number ?? '?'}]\n${c.chunk_text}`).join('\n\n')
+    : 'No relevant passages from the paper were found. The paper may not be processed yet, or the question may be outside the document. Answer generally based on your knowledge.';
+
+  const systemPrompt = `You are a helpful assistant answering questions about an academic paper. Use ONLY the following excerpts from the paper when answering. Cite page numbers when relevant (e.g. "As stated on page 3..."). If the context says "No relevant passages", acknowledge that and answer briefly from general knowledge. Be concise and accurate.`;
+
+  const userPrompt = `Paper excerpts:\n\n${context}\n\n---\n\nUser question: ${body.message}`;
+
+  const llmResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!llmResponse.ok) {
+    const errText = await llmResponse.text();
+    console.error('OpenAI paper_chat error:', llmResponse.status, errText);
+    throw new Error('OpenAI API error');
+  }
+
+  const llmData = await llmResponse.json();
+  const responseText = llmData.choices?.[0]?.message?.content || 'I could not generate a response.';
+
+  return {
+    response: responseText,
+    chunks_used: chunkList.map(c => c.id),
+    chunks: chunkList.map(c => ({ id: c.id, page_number: c.page_number, chunk_text: c.chunk_text })),
+  };
+}
+
+// ============================================
 // Main Research Assistant Handler
 // ============================================
 
@@ -417,6 +588,41 @@ serve(async (req) => {
       console.log("Research Assistant invoked with prompt:", body.prompt);
 
       const result = await handleResearchAssistant(body.prompt, OPENAI_API_KEY);
+
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Handle cold_email type requests
+    if (body.type === 'cold_email') {
+      console.log("Cold email requested for:", body.recipient_name);
+
+      const result = await handleColdEmail(
+        {
+          recipient_type: body.recipient_type || 'professor',
+          recipient_name: body.recipient_name || '',
+          recipient_email: body.recipient_email,
+          opportunity_context: body.opportunity_context,
+          tone: body.tone,
+          user_profile: body.user_profile,
+        },
+        OPENAI_API_KEY
+      );
+
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Handle paper_chat type requests (RAG)
+    if (body.type === 'paper_chat' && body.paper_id && body.message) {
+      console.log("Paper chat for paper_id:", body.paper_id);
+
+      const result = await handlePaperChat(
+        { paper_id: body.paper_id, message: body.message },
+        OPENAI_API_KEY
+      );
 
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

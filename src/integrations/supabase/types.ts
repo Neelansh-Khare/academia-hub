@@ -316,7 +316,9 @@ export type Database = {
           title: string
           filename: string
           file_url: string
+          file_size: number | null
           page_count: number | null
+          uploaded_at: string
           processed: boolean
           metadata: Json | null
           created_at: string
@@ -328,7 +330,9 @@ export type Database = {
           title: string
           filename: string
           file_url: string
+          file_size?: number | null
           page_count?: number | null
+          uploaded_at?: string
           processed?: boolean
           metadata?: Json | null
           created_at?: string
@@ -340,7 +344,9 @@ export type Database = {
           title?: string
           filename?: string
           file_url?: string
+          file_size?: number | null
           page_count?: number | null
+          uploaded_at?: string
           processed?: boolean
           metadata?: Json | null
           created_at?: string
@@ -502,38 +508,50 @@ export type Database = {
         Row: {
           id: string
           user_id: string
+          recipient_id: string | null
+          recipient_type: string | null
           recipient_name: string | null
           recipient_email: string | null
-          recipient_institution: string | null
           subject: string
           body: string
           tone: string | null
-          context: string | null
+          context: Json | null
+          sent: boolean | null
+          sent_at: string | null
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
+          recipient_id?: string | null
+          recipient_type?: string | null
           recipient_name?: string | null
           recipient_email?: string | null
-          recipient_institution?: string | null
           subject: string
           body: string
           tone?: string | null
-          context?: string | null
+          context?: Json | null
+          sent?: boolean | null
+          sent_at?: string | null
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
           user_id?: string
+          recipient_id?: string | null
+          recipient_type?: string | null
           recipient_name?: string | null
           recipient_email?: string | null
-          recipient_institution?: string | null
           subject?: string
           body?: string
           tone?: string | null
-          context?: string | null
+          context?: Json | null
+          sent?: boolean | null
+          sent_at?: string | null
           created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
