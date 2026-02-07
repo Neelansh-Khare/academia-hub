@@ -27,17 +27,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Search, MapPin, Clock, DollarSign, Briefcase, Plus, Filter, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
+import { useMatchScores } from '@/hooks/useMatchScores';
 import type { Database } from '@/integrations/supabase/types';
 
 type LabPost = Database['public']['Tables']['lab_posts']['Row'];
 
 interface PostWithMatch extends LabPost {
   match_score?: number;
+  match_explanation?: string;
 }
 
 const CollaborationBoard = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { calculateMatchScore, isCalculating } = useMatchScores();
   const navigate = useNavigate();
   const [posts, setPosts] = useState<PostWithMatch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,17 +89,21 @@ const CollaborationBoard = () => {
             .in('post_id', postIds);
 
           if (matchScores) {
-            const scoreMap = new Map(matchScores.map((ms) => [ms.post_id, ms.overall_score]));
-            postsWithMatches = postsWithMatches.map((post) => ({
-              ...post,
-              match_score: scoreMap.get(post.id),
-            }));
+            const scoreMap = new Map(matchScores.map((ms) => [ms.post_id, { score: ms.overall_score, reason: ms.explanation }]));
+            postsWithMatches = postsWithMatches.map((post) => {
+              const matchData = scoreMap.get(post.id);
+              return {
+                ...post,
+                match_score: matchData?.score,
+                match_explanation: matchData?.reason || undefined,
+              };
+            });
 
             // Sort by match score if available
             if (showMatchScores) {
               postsWithMatches.sort((a, b) => {
-                const aScore = a.match_score ?? 0;
-                const bScore = b.match_score ?? 0;
+                const aScore = a.match_score ?? -1;
+                const bScore = b.match_score ?? -1;
                 return bScore - aScore;
               });
             }
@@ -110,6 +117,22 @@ const CollaborationBoard = () => {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCalculateMatch = async (e: React.MouseEvent, post: PostWithMatch) => {
+    e.stopPropagation();
+    if (!profile) return;
+    
+    const result = await calculateMatchScore(post.id, profile, post);
+    if (result) {
+      // Update local state
+      setPosts(posts.map(p => p.id === post.id ? { 
+        ...p, 
+        match_score: result.overall_score,
+        match_explanation: result.reason
+      } : p));
+      toast.success('Match score calculated!');
     }
   };
 
@@ -276,11 +299,26 @@ const CollaborationBoard = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <CardTitle className="text-lg">{post.title}</CardTitle>
-                      {showMatchScores && post.match_score !== undefined && (
-                        <Badge variant="default" className="gap-1">
-                          <TrendingUp className="w-3 h-3" />
-                          {Math.round(post.match_score)}% match
-                        </Badge>
+                      {showMatchScores && (
+                        <div className="flex flex-col items-end gap-1">
+                          {post.match_score !== undefined ? (
+                            <Badge variant="default" className="gap-1">
+                              <TrendingUp className="w-3 h-3" />
+                              {Math.round(post.match_score)}% match
+                            </Badge>
+                          ) : (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 text-xs gap-1"
+                              onClick={(e) => handleCalculateMatch(e, post)}
+                              disabled={isCalculating}
+                            >
+                              <TrendingUp className="w-3 h-3" />
+                              Calculate Match
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                     <Badge variant="secondary">{post.type}</Badge>
@@ -295,6 +333,12 @@ const CollaborationBoard = () => {
                 )}
               </CardHeader>
               <CardContent className="flex-1">
+                {showMatchScores && post.match_explanation && (
+                  <div className="mb-4 p-2 bg-primary/5 rounded-md border border-primary/10 text-xs italic">
+                    <p className="text-primary font-semibold mb-1">AI Insights:</p>
+                    {post.match_explanation}
+                  </div>
+                )}
                 <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
                   {post.description || 'No description provided.'}
                 </p>

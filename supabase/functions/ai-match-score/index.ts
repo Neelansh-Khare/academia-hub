@@ -20,18 +20,40 @@ serve(async (req) => {
 
     console.log("Computing match score for profile and post");
 
-    const systemPrompt = `You are an academic research matching assistant. Given a researcher's profile and a lab post, compute a match score from 0-100 and provide a brief explanation. Consider:
-- Research field overlap
-- Method/tool alignment
+    // 1. Calculate Keyword Overlap Score (0-40 points)
+    const calculateOverlap = (userItems: string[] | null, postItems: string[] | null) => {
+      if (!postItems || postItems.length === 0) return 1; // Neutral if post has no requirements
+      if (!userItems || userItems.length === 0) return 0;
+      
+      const userSet = new Set(userItems.map(i => i.toLowerCase()));
+      const matches = postItems.filter(i => userSet.has(i.toLowerCase()));
+      return matches.length / postItems.length;
+    };
+
+    const fieldsScore = calculateOverlap(profileFields.research_fields, postFields.tags) * 20;
+    const methodsScore = calculateOverlap(profileFields.methods, postFields.methods) * 10;
+    const toolsScore = calculateOverlap(profileFields.tools, postFields.tools) * 10;
+    
+    const keywordScore = Math.round(fieldsScore + methodsScore + toolsScore);
+
+    const systemPrompt = `You are an academic research matching assistant. Given a researcher's profile and a lab post, compute a match score and provide a brief explanation.
+
+We have already calculated a Keyword Overlap Score: ${keywordScore}/40.
+
+Now, you must evaluate the "Soft Skills & Context" match (0-60 points) considering:
 - Career stage fit
+- Experience depth described in bio vs post description
+- Institutional alignment
 - Location compatibility (if relevant)
 
-Return JSON: { "score": number, "reason": string }`;
+Return JSON with the individual scores and a final combined score (0-100).
+{ "keyword_score": number, "llm_score": number, "overall_score": number, "reason": string }`;
 
     const userPrompt = `Profile: ${JSON.stringify(profileFields, null, 2)}
 Post: ${JSON.stringify(postFields, null, 2)}
 
-Compute match score (0-100) and explain why.`;
+The keyword overlap score is already ${keywordScore}/40. 
+Compute the remaining match components (0-60) and provide the final overall_score (keyword_score + llm_score) and explanation.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -50,14 +72,16 @@ Compute match score (0-100) and explain why.`;
             type: "function",
             function: {
               name: "return_match_score",
-              description: "Return the match score and explanation",
+              description: "Return the match score breakdown and explanation",
               parameters: {
                 type: "object",
                 properties: {
-                  score: { type: "number", description: "Match score from 0 to 100" },
+                  keyword_score: { type: "number", description: "Calculated keyword overlap score (0-40)" },
+                  llm_score: { type: "number", description: "AI evaluated fit score (0-60)" },
+                  overall_score: { type: "number", description: "Final combined score (0-100)" },
                   reason: { type: "string", description: "Brief explanation of the score" }
                 },
-                required: ["score", "reason"],
+                required: ["keyword_score", "llm_score", "overall_score", "reason"],
                 additionalProperties: false
               }
             }
