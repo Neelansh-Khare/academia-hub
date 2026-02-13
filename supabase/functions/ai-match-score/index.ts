@@ -40,20 +40,29 @@ serve(async (req) => {
 
 We have already calculated a Keyword Overlap Score: ${keywordScore}/40.
 
-Now, you must evaluate the "Soft Skills & Context" match (0-60 points) considering:
-- Career stage fit
-- Experience depth described in bio vs post description
-- Institutional alignment
-- Location compatibility (if relevant)
+Now, you must evaluate the remaining components to reach a total score (0-100):
 
-Return JSON with the individual scores and a final combined score (0-100).
-{ "keyword_score": number, "llm_score": number, "overall_score": number, "reason": string }`;
+1. **Skills Match Score (0-30 points)**:
+   - Evaluate the user's bio, degree status, and explicit skills against the post's description and requirements.
+   - Consider experience depth and relevance.
+
+2. **Proximity & Alignment Score (0-20 points)**:
+   - Institutional affiliation (same university = high score).
+   - Geographic location (if relevant/specified).
+   - Remote work alignment.
+   - Career stage alignment (e.g., undergrad vs. post-doc).
+
+3. **LLM Synthesis Score (0-10 points)**:
+   - Your overall "vibe check" or assessment of fit based on nuanced factors not captured above.
+
+Return JSON with the individual scores and a final combined score.
+{ "keyword_score": number, "skills_score": number, "proximity_score": number, "llm_score": number, "overall_score": number, "reason": string }`;
 
     const userPrompt = `Profile: ${JSON.stringify(profileFields, null, 2)}
 Post: ${JSON.stringify(postFields, null, 2)}
 
 The keyword overlap score is already ${keywordScore}/40. 
-Compute the remaining match components (0-60) and provide the final overall_score (keyword_score + llm_score) and explanation.`;
+Compute the remaining match components (Skills /30, Proximity /20, LLM /10) and provide the final overall_score and explanation.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -77,11 +86,13 @@ Compute the remaining match components (0-60) and provide the final overall_scor
                 type: "object",
                 properties: {
                   keyword_score: { type: "number", description: "Calculated keyword overlap score (0-40)" },
-                  llm_score: { type: "number", description: "AI evaluated fit score (0-60)" },
+                  skills_score: { type: "number", description: "Skills match score (0-30)" },
+                  proximity_score: { type: "number", description: "Proximity and alignment score (0-20)" },
+                  llm_score: { type: "number", description: "LLM synthesis score (0-10)" },
                   overall_score: { type: "number", description: "Final combined score (0-100)" },
                   reason: { type: "string", description: "Brief explanation of the score" }
                 },
-                required: ["keyword_score", "llm_score", "overall_score", "reason"],
+                required: ["keyword_score", "skills_score", "proximity_score", "llm_score", "overall_score", "reason"],
                 additionalProperties: false
               }
             }

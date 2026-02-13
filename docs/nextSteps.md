@@ -22,14 +22,15 @@ This document outlines how to incorporate the remaining features from the PRD in
 - **All page routes configured** ✅
 - **TypeScript types for all 14 database tables** ✅
 
-### ✅ Recently Completed (Tasks 3.1–3.4 + Repo Fixes)
+### ✅ Recently Completed (Tasks 3.1–3.4, 4.1 + Repo Fixes)
 - **ScholarGPT (Paper Chat)**: ✅ Full RAG pipeline (process-paper PDF → chunks → embeddings, paper_chat handler with vector search, UI: processing status, page citations, View Source, new conversation)
+- **Smart Matchmaking (Task 4.1)**: ✅ Enhanced scoring algorithm (Keyword, Skills, Proximity, LLM) and frontend hook integration.
 - **Cold Email Generator**: ✅ Backend handler in `ai-lab-assistant` (type: `cold_email`), optional Semantic Scholar context
 - **TypeScript types**: ✅ `cold_emails` and `papers` in `types.ts` aligned with migration (recipient_id, recipient_type, context as Json, uploaded_at, file_size)
 - **RPC**: ✅ `match_paper_chunks(paper_id, query_embedding, match_count)` for vector similarity search
 
 ### 🟡 Partially Implemented (Needs Enhancement)
-- **Smart Matchmaking**: Edge function exists, UI ready, but frontend does not invoke `ai-match-score` to populate scores
+- **Smart Matchmaking**: ✅ Task 4.1 complete. Tasks 4.2 (Batch processing) and 4.3 (Dashboard enhancements) remain.
 - **Profile Page**: UI complete, publications tab works, linked profiles partial
 
 ### ❌ Not Yet Implemented
@@ -266,11 +267,12 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 
 **Task 4.1: Improve Match Scoring Algorithm**
 - **Priority**: High
-- **Status**: Basic structure exists, needs enhancement
-- **Files to Modify**:
-  - `supabase/functions/ai-match-score/index.ts`
+- **Status**: ✅ Backend & Hook Implemented
+- **Files Modified**:
+  - `supabase/functions/ai-match-score/index.ts` (updated algorithm)
+  - `src/hooks/useMatchScores.tsx` (updated to save new scores)
 
-- **Current Implementation**: Basic LLM-based scoring
+- **Current Implementation**: Enhanced LLM-based scoring
 - **Enhanced Implementation**:
   1. **Keyword Overlap Score** (0-40 points):
      - Compare research_fields, methods, tools between profile and post
@@ -295,10 +297,10 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
   5. **Overall Score Calculation**:
      ```typescript
      overall_score = (
-       keyword_overlap * 0.4 +
-       skills_match * 0.3 +
-       proximity_score * 0.2 +
-       llm_synthesis * 0.1
+       keyword_overlap (0-40) +
+       skills_match (0-30) +
+       proximity_score (0-20) +
+       llm_synthesis (0-10)
      )
      ```
 

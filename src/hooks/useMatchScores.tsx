@@ -27,6 +27,8 @@ export const useMatchScores = () => {
         student_id: user.id,
         post_id: postId,
         keyword_score: data.keyword_score,
+        skills_score: data.skills_score,
+        proximity_score: data.proximity_score,
         llm_score: data.llm_score,
         overall_score: data.overall_score,
         explanation: data.reason,
