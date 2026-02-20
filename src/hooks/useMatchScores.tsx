@@ -1,11 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { Tables } from '@/integrations/supabase/types';
+
+type MatchScore = Tables<'match_scores'>;
+type LabPost = Tables<'lab_posts'>;
+
+interface MatchScoreWithPost extends MatchScore {
+  lab_posts: LabPost;
+}
 
 export const useMatchScores = () => {
   const { user } = useAuth();
   const [isCalculating, setIsCalculating] = useState(false);
+  const [matchScores, setMatchScores] = useState<MatchScoreWithPost[]>([]);
+  const [isLoadingScores, setIsLoadingScores] = useState(false);
 
   const calculateMatchScore = async (postId: string, profileFields: any, postFields: any) => {
     if (!user) {
@@ -39,6 +49,9 @@ export const useMatchScores = () => {
 
       if (dbError) throw dbError;
 
+      // After calculating and saving, refresh the fetched scores
+      await fetchMatchScores();
+
       return data;
     } catch (error: any) {
       console.error('Error calculating match score:', error);
@@ -49,8 +62,39 @@ export const useMatchScores = () => {
     }
   };
 
+  const fetchMatchScores = useCallback(async () => {
+    if (!user) return;
+    setIsLoadingScores(true);
+    try {
+      const { data, error } = await supabase
+        .from('match_scores')
+        .select(`*, lab_posts(*)`) // Select all from match_scores and join lab_posts
+        .eq('student_id', user.id)
+        .order('overall_score', { ascending: false })
+        .limit(5); // Get top 5 matches
+
+      if (error) throw error;
+      setMatchScores(data as MatchScoreWithPost[]);
+    } catch (error: any) {
+      console.error('Error fetching match scores:', error);
+      toast.error('Failed to load recommended matches');
+    } finally {
+      setIsLoadingScores(false);
+    }
+  }, [user]);
+
+  // Fetch scores on component mount if user is available
+  useEffect(() => {
+    if (user) {
+      fetchMatchScores();
+    }
+  }, [user, fetchMatchScores]);
+
   return {
     calculateMatchScore,
-    isCalculating
+    isCalculating,
+    fetchMatchScores,
+    matchScores,
+    isLoadingScores
   };
 };

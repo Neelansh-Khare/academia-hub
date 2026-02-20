@@ -314,7 +314,7 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 
 **Task 4.3: Match Score Dashboard**
 - **Priority**: Medium
-- **Status**: ❌ Not Started
+- **Status**: ✅ Completed
 - **Implementation Steps**:
   1. Add "Recommended Matches" section to dashboard
   2. Show top 5 matches for user's profile
@@ -327,7 +327,7 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 
 **Task 5.1: Implement Cold Email Generation**
 - **Priority**: High
-- **Status**: UI exists, needs backend
+- **Status**: ✅ Completed
 - **Files to Modify**:
   - `supabase/functions/ai-lab-assistant/index.ts` (add cold_email type)
   - `src/pages/ColdEmailGenerator.tsx` (connect to API)

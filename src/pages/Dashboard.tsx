@@ -3,12 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { GraduationCap, Search, FileText, Bot, LogOut, User } from 'lucide-react';
+import { GraduationCap, Search, FileText, Bot, LogOut, User, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMatchScores } from '@/hooks/useMatchScores';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
+  const { matchScores, isLoadingScores } = useMatchScores();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -83,14 +87,14 @@ const Dashboard = () => {
               </CardHeader>
             </Card>
 
-            <Card className="border-border/50 hover:shadow-elevated transition-shadow cursor-pointer group" onClick={() => navigate('/posts')}>
+            <Card className="border-border/50 hover:shadow-elevated transition-shadow cursor-pointer group" onClick={() => navigate('/board')}>
               <CardHeader>
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
                   <FileText className="w-5 h-5 text-primary" />
                 </div>
-                <CardTitle className="font-display">My posts</CardTitle>
+                <CardTitle className="font-display">Collaboration Board</CardTitle>
                 <CardDescription>
-                  Manage your job postings and applications
+                  View and post research collaboration opportunities
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -119,6 +123,47 @@ const Dashboard = () => {
               </CardHeader>
             </Card>
           </div>
+
+          {/* Recommended Matches Section */}
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-display">
+                  <Zap className="w-5 h-5 text-yellow-500" />
+                  Recommended Matches
+                </CardTitle>
+                <CardDescription>
+                  Top research opportunities matched to your profile.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingScores ? (
+                  <div className="text-center py-4 text-muted-foreground">Loading matches...</div>
+                ) : matchScores.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">No recommended matches found yet. Make sure your profile is complete!</div>
+                ) : (
+                  <div className="space-y-4">
+                    {matchScores.map((match) => (
+                      <Card key={match.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/board/${match.post_id}`)}>
+                        <CardHeader className="py-3 px-4">
+                          <div className="flex justify-between items-center">
+                            <h3 className="font-semibold text-base">{match.lab_posts?.title || 'Unknown Post'}</h3>
+                            <Badge variant="secondary" className="text-sm">
+                              {match.overall_score}% Match
+                            </Badge>
+                          </div>
+                          <Progress value={match.overall_score} className="h-2 mt-2" />
+                        </CardHeader>
+                        <CardContent className="py-3 px-4 text-sm text-muted-foreground">
+                          <p className="line-clamp-2">{match.explanation}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </section>
         </div>
       </main>
     </div>
