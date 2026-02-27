@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ProfilePage from "./pages/ProfilePage";
+import PublicProfile from "./pages/PublicProfile";
 import CollaborationBoard from "./pages/CollaborationBoard";
 import ResearchAssistant from "./pages/ResearchAssistant";
 import PaperChat from "./pages/PaperChat";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/:id" element={<PublicProfile />} />
             <Route path="/board" element={<CollaborationBoard />} />
             <Route path="/assistant" element={<ResearchAssistant />} />
             <Route path="/paper-chat" element={<PaperChat />} />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -24,17 +24,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, MapPin, Clock, DollarSign, Briefcase, Plus, Filter, TrendingUp } from 'lucide-react';
+import { Search, MapPin, Clock, DollarSign, Briefcase, Plus, Filter, TrendingUp, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
 import { useMatchScores } from '@/hooks/useMatchScores';
 import type { Database } from '@/integrations/supabase/types';
 
 type LabPost = Database['public']['Tables']['lab_posts']['Row'];
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 interface PostWithMatch extends LabPost {
   match_score?: number;
   match_explanation?: string;
+  owner?: Profile;
 }
 
 const CollaborationBoard = () => {
@@ -48,6 +50,8 @@ const CollaborationBoard = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [remoteFilter, setRemoteFilter] = useState<boolean | null>(null);
   const [paidFilter, setPaidFilter] = useState<boolean | null>(null);
+  const [institutionFilter, setInstitutionFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
   const [showMatchScores, setShowMatchScores] = useState(false);
   const [selectedPost, setSelectedPost] = useState<LabPost | null>(null);
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
@@ -56,12 +60,15 @@ const CollaborationBoard = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, [typeFilter, remoteFilter, paidFilter, showMatchScores, profile]);
+  }, [typeFilter, remoteFilter, paidFilter, institutionFilter, locationFilter, showMatchScores, profile]);
 
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      let query = supabase.from('lab_posts').select('*').order('created_at', { ascending: false });
+      let query = supabase
+        .from('lab_posts')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (typeFilter !== 'all') {
         query = query.eq('type', typeFilter);
@@ -72,11 +79,34 @@ const CollaborationBoard = () => {
       if (paidFilter !== null) {
         query = query.eq('paid', paidFilter);
       }
+      if (institutionFilter) {
+        query = query.ilike('institution', `%${institutionFilter}%`);
+      }
+      if (locationFilter) {
+        query = query.ilike('location', `%${locationFilter}%`);
+      }
 
       const { data, error } = await query;
 
       if (error) throw error;
       let postsWithMatches: PostWithMatch[] = data || [];
+
+      // Fetch owner profiles
+      const ownerIds = [...new Set(postsWithMatches.map(p => p.owner_id))];
+      if (ownerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('id', ownerIds);
+        
+        if (profiles) {
+          const profileMap = new Map(profiles.map(p => [p.id, p]));
+          postsWithMatches = postsWithMatches.map(post => ({
+            ...post,
+            owner: profileMap.get(post.owner_id)
+          }));
+        }
+      }
 
       // Load match scores if user is logged in and match scores are enabled
       if (user && showMatchScores && profile) {
@@ -221,6 +251,21 @@ const CollaborationBoard = () => {
             </div>
 
             <div className="flex gap-2">
+              <div className="w-[180px]">
+                <Input
+                  placeholder="Institution..."
+                  value={institutionFilter}
+                  onChange={(e) => setInstitutionFilter(e.target.value)}
+                />
+              </div>
+              <div className="w-[180px]">
+                <Input
+                  placeholder="Location..."
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                />
+              </div>
+
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Type" />
@@ -324,6 +369,18 @@ const CollaborationBoard = () => {
                     <Badge variant="secondary">{post.type}</Badge>
                   </div>
                 </div>
+                {post.owner && (
+                  <Link 
+                    to={`/profile/${post.owner_id}`}
+                    className="flex items-center gap-2 mt-3 group"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <User className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <span className="text-sm font-medium group-hover:text-primary transition-colors">
+                      {post.owner.full_name || 'Anonymous Researcher'}
+                    </span>
+                  </Link>
+                )}
                 {post.institution && (
                   <CardDescription className="flex items-center gap-1 mt-2">
                     <MapPin className="w-3 h-3" />
