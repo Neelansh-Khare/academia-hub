@@ -36,7 +36,7 @@ type Profile = Database['public']['Tables']['profiles']['Row'];
 interface PostWithMatch extends LabPost {
   match_score?: number;
   match_explanation?: string;
-  owner?: Profile;
+  owner?: Profile & { publication_count?: number };
 }
 
 const CollaborationBoard = () => {
@@ -48,10 +48,12 @@ const CollaborationBoard = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [degreeFilter, setDegreeFilter] = useState<string>('all');
   const [remoteFilter, setRemoteFilter] = useState<boolean | null>(null);
   const [paidFilter, setPaidFilter] = useState<boolean | null>(null);
   const [institutionFilter, setInstitutionFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
+  const [minPubsFilter, setMinPubsFilter] = useState<number>(0);
   const [showMatchScores, setShowMatchScores] = useState(false);
   const [selectedPost, setSelectedPost] = useState<LabPost | null>(null);
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
@@ -60,7 +62,7 @@ const CollaborationBoard = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, [typeFilter, remoteFilter, paidFilter, institutionFilter, locationFilter, showMatchScores, profile]);
+  }, [typeFilter, degreeFilter, remoteFilter, paidFilter, institutionFilter, locationFilter, showMatchScores, profile]);
 
   const fetchPosts = async () => {
     try {
@@ -72,6 +74,9 @@ const CollaborationBoard = () => {
 
       if (typeFilter !== 'all') {
         query = query.eq('type', typeFilter);
+      }
+      if (degreeFilter !== 'all') {
+        query = query.eq('degree_level', degreeFilter);
       }
       if (remoteFilter !== null) {
         query = query.eq('remote_allowed', remoteFilter);
@@ -91,7 +96,7 @@ const CollaborationBoard = () => {
       if (error) throw error;
       let postsWithMatches: PostWithMatch[] = data || [];
 
-      // Fetch owner profiles
+      // Fetch owner profiles and their publication counts
       const ownerIds = [...new Set(postsWithMatches.map(p => p.owner_id))];
       if (ownerIds.length > 0) {
         const { data: profiles } = await supabase
@@ -99,13 +104,33 @@ const CollaborationBoard = () => {
           .select('*')
           .in('id', ownerIds);
         
+        // Fetch publication counts for these owners
+        const { data: pubCounts } = await supabase
+          .from('publications')
+          .select('user_id')
+          .in('user_id', ownerIds);
+        
+        const countMap = new Map<string, number>();
+        pubCounts?.forEach(p => {
+          countMap.set(p.user_id, (countMap.get(p.user_id) || 0) + 1);
+        });
+
         if (profiles) {
-          const profileMap = new Map(profiles.map(p => [p.id, p]));
+          const profileMap = new Map(profiles.map(p => [
+            p.id, 
+            { ...p, publication_count: countMap.get(p.id) || 0 }
+          ]));
+          
           postsWithMatches = postsWithMatches.map(post => ({
             ...post,
             owner: profileMap.get(post.owner_id)
           }));
         }
+      }
+
+      // Apply publication count filter
+      if (minPubsFilter > 0) {
+        postsWithMatches = postsWithMatches.filter(p => (p.owner?.publication_count || 0) >= minPubsFilter);
       }
 
       // Load match scores if user is logged in and match scores are enabled
@@ -250,15 +275,15 @@ const CollaborationBoard = () => {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <div className="w-[180px]">
+            <div className="flex flex-wrap gap-2">
+              <div className="w-[150px]">
                 <Input
                   placeholder="Institution..."
                   value={institutionFilter}
                   onChange={(e) => setInstitutionFilter(e.target.value)}
                 />
               </div>
-              <div className="w-[180px]">
+              <div className="w-[120px]">
                 <Input
                   placeholder="Location..."
                   value={locationFilter}
@@ -267,7 +292,7 @@ const CollaborationBoard = () => {
               </div>
 
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[130px]">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -278,7 +303,32 @@ const CollaborationBoard = () => {
                 </SelectContent>
               </Select>
 
-              <div className="flex items-center gap-2 px-3 border rounded-md">
+              <Select value={degreeFilter} onValueChange={setDegreeFilter}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Levels</SelectItem>
+                  <SelectItem value="undergraduate">Undergraduate</SelectItem>
+                  <SelectItem value="masters">Masters</SelectItem>
+                  <SelectItem value="phd">PhD</SelectItem>
+                  <SelectItem value="postdoc">Postdoc</SelectItem>
+                  <SelectItem value="any">Any Level</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="w-[100px] flex items-center gap-2 border rounded-md px-2">
+                <Input
+                  type="number"
+                  placeholder="Min Pubs"
+                  value={minPubsFilter || ''}
+                  onChange={(e) => setMinPubsFilter(parseInt(e.target.value) || 0)}
+                  className="border-0 p-1 h-8 focus-visible:ring-0"
+                />
+                <FileText className="w-3 h-3 text-muted-foreground shrink-0" />
+              </div>
+
+              <div className="flex items-center gap-2 px-3 border rounded-md h-10">
                 <Checkbox
                   id="remote"
                   checked={remoteFilter === true}
@@ -291,7 +341,7 @@ const CollaborationBoard = () => {
                 </Label>
               </div>
 
-              <div className="flex items-center gap-2 px-3 border rounded-md">
+              <div className="flex items-center gap-2 px-3 border rounded-md h-10">
                 <Checkbox
                   id="paid"
                   checked={paidFilter === true}
@@ -305,7 +355,7 @@ const CollaborationBoard = () => {
               </div>
 
               {user && profile && (
-                <div className="flex items-center gap-2 px-3 border rounded-md">
+                <div className="flex items-center gap-2 px-3 border rounded-md h-10">
                   <Checkbox
                     id="match-scores"
                     checked={showMatchScores}
@@ -366,19 +416,30 @@ const CollaborationBoard = () => {
                         </div>
                       )}
                     </div>
-                    <Badge variant="secondary">{post.type}</Badge>
+                    <div className="flex gap-2">
+                      <Badge variant="secondary">{post.type}</Badge>
+                      {post.degree_level && <Badge variant="outline">{post.degree_level}</Badge>}
+                    </div>
                   </div>
                 </div>
                 {post.owner && (
                   <Link 
                     to={`/profile/${post.owner_id}`}
+                    state={{ postId: post.id }}
                     className="flex items-center gap-2 mt-3 group"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <User className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                    <span className="text-sm font-medium group-hover:text-primary transition-colors">
-                      {post.owner.full_name || 'Anonymous Researcher'}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium group-hover:text-primary transition-colors">
+                        {post.owner.full_name || 'Anonymous Researcher'}
+                      </span>
+                      {post.owner.publication_count !== undefined && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {post.owner.publication_count} publications
+                        </span>
+                      )}
+                    </div>
                   </Link>
                 )}
                 {post.institution && (

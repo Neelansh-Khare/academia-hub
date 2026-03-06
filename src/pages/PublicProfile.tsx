@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { usePublicProfile } from '@/hooks/useProfile';
 import { usePublications } from '@/hooks/usePublications';
 import { Button } from '@/components/ui/button';
@@ -12,18 +12,26 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ExternalLink, FileText, Loader2, Mail, MapPin, Building, GraduationCap, ChevronLeft } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ExternalLink, FileText, Loader2, Mail, MapPin, Building, GraduationCap, ChevronLeft, TrendingUp, BarChart3, Quote } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useAuth } from '@/hooks/useAuth';
 
 const PublicProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = usePublicProfile(id);
   const { publications, isLoading: publicationsLoading } = usePublications(id);
   const [linkedProfiles, setLinkedProfiles] = useState<
     Array<{ platform: string; url: string; username?: string }>
   >([]);
+  const [matchScore, setMatchScore] = useState<{ score: number; explanation: string } | null>(null);
+
+  // Parse state from location (if coming from collaboration board)
+  const sourcePostId = (location.state as any)?.postId;
 
   useEffect(() => {
     const loadLinkedProfiles = async () => {
@@ -41,8 +49,62 @@ const PublicProfile = () => {
       }
     };
 
+    const loadMatchScore = async () => {
+      if (!id || !user || !sourcePostId) return;
+      try {
+        const { data, error } = await supabase
+          .from('match_scores')
+          .select('overall_score, explanation')
+          .eq('student_id', user.id)
+          .eq('post_id', sourcePostId)
+          .maybeSingle();
+        
+        if (data) {
+          setMatchScore({ score: data.overall_score, explanation: data.explanation || '' });
+        }
+      } catch (error) {
+        console.error('Failed to load match score:', error);
+      }
+    };
+
     loadLinkedProfiles();
-  }, [id]);
+    loadMatchScore();
+  }, [id, user, sourcePostId]);
+
+  const stats = useMemo(() => {
+    if (!publications.length) return { totalCitations: 0, hIndex: 0, i10Index: 0, chartData: [] };
+
+    const totalCitations = publications.reduce((acc, pub) => acc + (pub.citation_count || 0), 0);
+    
+    // H-index
+    const sortedCitations = [...publications]
+      .map(p => p.citation_count || 0)
+      .sort((a, b) => b - a);
+    
+    let hIndex = 0;
+    while (hIndex < sortedCitations.length && sortedCitations[hIndex] >= hIndex + 1) {
+      hIndex++;
+    }
+
+    // i10-index
+    const i10Index = publications.filter(p => (p.citation_count || 0) >= 10).length;
+
+    // Chart data (pubs by year)
+    const yearCounts: Record<number, number> = {};
+    publications.forEach(pub => {
+      if (pub.year) {
+        yearCounts[pub.year] = (yearCounts[pub.year] || 0) + 1;
+      }
+    });
+
+    const years = Object.keys(yearCounts).map(Number).sort((a, b) => a - b);
+    const chartData = years.map(year => ({
+      year: year.toString(),
+      count: yearCounts[year]
+    }));
+
+    return { totalCitations, hIndex, i10Index, chartData };
+  }, [publications]);
 
   if (profileLoading) {
     return (
@@ -114,11 +176,61 @@ const PublicProfile = () => {
                 </Badge>
               </div>
 
+              {matchScore && (
+                <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/10 text-left">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold flex items-center gap-1">
+                      <TrendingUp className="w-4 h-4 text-primary" />
+                      Match Score
+                    </span>
+                    <Badge variant="default">{matchScore.score}%</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground italic leading-relaxed">
+                    "{matchScore.explanation}"
+                  </p>
+                </div>
+              )}
+
               <div className="mt-8">
                 <Button className="w-full gap-2">
                   <Mail className="w-4 h-4" />
                   Contact
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Metrics Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Metrics
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">{stats.totalCitations}</p>
+                <p className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                  <Quote className="w-2 h-2" /> Citations
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">{stats.hIndex}</p>
+                <p className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                  <BarChart3 className="w-2 h-2" /> H-Index
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">{stats.i10Index}</p>
+                <p className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                  <FileText className="w-2 h-2" /> i10-Index
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">{publications.length}</p>
+                <p className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                  <FileText className="w-2 h-2" /> Papers
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -158,13 +270,52 @@ const PublicProfile = () => {
               <TabsTrigger value="publications">Publications ({publications.length})</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="about" className="space-y-6 mt-6">
+            <TabsContent value="about" className="space-y-8 mt-6">
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Biography</h3>
                 <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
                   {profile.bio || 'No biography provided.'}
                 </p>
               </div>
+
+              {/* Research Activity Chart */}
+              {stats.chartData.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Research Activity</h3>
+                  <div className="h-48 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={stats.chartData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
+                        <XAxis 
+                          dataKey="year" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} 
+                        />
+                        <YAxis 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} 
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))', 
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: '8px' 
+                          }}
+                          itemStyle={{ color: 'hsl(var(--primary))' }}
+                        />
+                        <Bar 
+                          dataKey="count" 
+                          fill="hsl(var(--primary))" 
+                          radius={[4, 4, 0, 0]} 
+                          name="Publications"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
 
               <div className="grid gap-6">
                 {profile.research_fields && profile.research_fields.length > 0 && (

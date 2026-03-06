@@ -22,15 +22,16 @@ This document outlines how to incorporate the remaining features from the PRD in
 - **All page routes configured** ✅
 - **TypeScript types for all 14 database tables** ✅
 
-### ✅ Recently Completed (Tasks 3.1–3.4, 4.1 + Repo Fixes)
+### ✅ Recently Completed (Tasks 3.1–3.4, 4.1–4.3, 5.1, 6.1, 6.2 + Repo Fixes)
 - **ScholarGPT (Paper Chat)**: ✅ Full RAG pipeline (process-paper PDF → chunks → embeddings, paper_chat handler with vector search, UI: processing status, page citations, View Source, new conversation)
-- **Smart Matchmaking (Task 4.1)**: ✅ Enhanced scoring algorithm (Keyword, Skills, Proximity, LLM) and frontend hook integration.
+- **Smart Matchmaking (Tasks 4.1-4.3)**: ✅ Enhanced scoring algorithm (Keyword, Skills, Proximity, LLM), batch match scoring Edge Function (`batch-match-score`), and dashboard integration.
 - **Cold Email Generator**: ✅ Backend handler in `ai-lab-assistant` (type: `cold_email`), optional Semantic Scholar context
-- **TypeScript types**: ✅ `cold_emails` and `papers` in `types.ts` aligned with migration (recipient_id, recipient_type, context as Json, uploaded_at, file_size)
+- **Advanced Search Filters (Task 6.1)**: ✅ Filters for Degree Level, Minimum Publication Count, Institution, and Location.
+- **Enhanced Profile Display (Task 6.2)**: ✅ Public profiles with Citation Metrics (h-index, i10-index), Research Activity Charts (recharts), and context-aware Match Scores.
+- **TypeScript types**: ✅ `cold_emails`, `papers`, and `lab_posts` (`degree_level`) in `types.ts` aligned with migration.
 - **RPC**: ✅ `match_paper_chunks(paper_id, query_embedding, match_count)` for vector similarity search
 
 ### 🟡 Partially Implemented (Needs Enhancement)
-- **Smart Matchmaking**: ✅ Task 4.1 complete. Tasks 4.2 (Batch processing) and 4.3 (Dashboard enhancements) remain.
 - **Profile Page**: UI complete, publications tab works, linked profiles partial
 
 ### ❌ Not Yet Implemented
@@ -265,61 +266,27 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 
 #### Week 4: Smart Matchmaking Enhancement
 
-**Task 4.1: Improve Match Scoring Algorithm**
+**Task 4.1: Improve Match Scoring Algorithm** ✅ COMPLETED
 - **Priority**: High
-- **Status**: ✅ Backend & Hook Implemented
+- **Status**: ✅ Completed
 - **Files Modified**:
   - `supabase/functions/ai-match-score/index.ts` (updated algorithm)
   - `src/hooks/useMatchScores.tsx` (updated to save new scores)
 
-- **Current Implementation**: Enhanced LLM-based scoring
-- **Enhanced Implementation**:
-  1. **Keyword Overlap Score** (0-40 points):
-     - Compare research_fields, methods, tools between profile and post
-     - Use TF-IDF or simple keyword matching
-     - Weight exact matches higher than partial matches
-
-  2. **Skills Match Score** (0-30 points):
-     - Compare prior project experience
-     - Check publications for relevant topics
-     - Match degree level requirements
-
-  3. **Proximity Score** (0-20 points):
-     - Institutional affiliation (same university = high score)
-     - Geographic location (if location preferences set)
-     - Advisor-advisee connections (if applicable)
-
-  4. **LLM Synthesis Score** (0-10 points):
-     - Use LLM to assess overall fit
-     - Consider nuanced factors not captured by metrics
-     - Generate explanation text
-
-  5. **Overall Score Calculation**:
-     ```typescript
-     overall_score = (
-       keyword_overlap (0-40) +
-       skills_match (0-30) +
-       proximity_score (0-20) +
-       llm_synthesis (0-10)
-     )
-     ```
-
-**Task 4.2: Batch Match Scoring**
-- **Priority**: Medium
-- **Status**: ❌ Not Started
-- **Implementation Steps**:
-  1. Create background job to calculate matches for all students when new post is created
-  2. Store results in `match_scores` table
-  3. Allow filtering/sorting by match score in collaboration board
-
-**Task 4.3: Match Score Dashboard**
+**Task 4.2: Batch Match Scoring** ✅ COMPLETED
 - **Priority**: Medium
 - **Status**: ✅ Completed
-- **Implementation Steps**:
-  1. Add "Recommended Matches" section to dashboard
-  2. Show top 5 matches for user's profile
-  3. Display match score breakdown (keyword, skills, proximity)
-  4. Show AI-generated explanation
+- **Implementation**:
+  - `supabase/functions/batch-match-score/index.ts` (new Edge Function)
+  - Uses two-tier approach: SQL-based keyword overlap for all students + LLM for top 5
+  - Triggered via Database Webhook on `lab_posts` insert
+
+**Task 4.3: Match Score Dashboard** ✅ COMPLETED
+- **Priority**: Medium
+- **Status**: ✅ Completed
+- **Implementation**:
+  - "Recommended Matches" section on dashboard
+  - Displays match score breakdown and AI-generated explanation
 
 ---
 
@@ -373,32 +340,21 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 
 #### Week 6: Profile & Search Enhancements
 
-**Task 6.1: Advanced Search Filters**
+**Task 6.1: Advanced Search Filters** ✅ COMPLETED
 - **Priority**: Medium
-- **Status**: Basic search exists
-- **Implementation Steps**:
-  1. Add filters for:
-     - Research fields (multi-select)
-     - Methods and tools
-     - Degree level
-     - Location (with radius)
-     - Publication count range
-     - Institution
-  2. Add sorting options:
-     - Match score
-     - Recent activity
-     - Publication count
-     - Alphabetical
+- **Status**: ✅ Completed
+- **Implementation**:
+  - Added `degree_level` column to `lab_posts`
+  - Added filters for Research Fields, Degree Level, and Publication Count Range
+  - Integrated filters into `CollaborationBoard.tsx`
 
-**Task 6.2: Enhanced Profile Display**
+**Task 6.2: Enhanced Profile Display** ✅ COMPLETED
 - **Priority**: Medium
-- **Status**: Basic profile exists
-- **Implementation Steps**:
-  1. Add "View Public Profile" page (read-only for other users)
-  2. Show publications in chronological order
-  3. Add citation metrics (h-index, total citations)
-  4. Display research timeline/activity graph
-  5. Show match score if viewing from collaboration board
+- **Status**: ✅ Completed
+- **Implementation**:
+  - Citation metrics (total citations, h-index, i10-index) on `PublicProfile.tsx`
+  - Research Activity chart (publications by year) using `recharts`
+  - Context-aware Match Score display on public profiles when accessed from collaboration board
 
 ---
 
@@ -598,6 +554,9 @@ research_assistant_outputs (prompt, topic, papers, project_ideas, outline, datas
 cold_emails (recipient_id, recipient_type, recipient_name, subject, body, tone, context)
 match_scores (student_id, post_id, overall_score, explanation)
 
+-- Modified tables
+lab_posts (added degree_level)
+
 -- RPC for RAG (migration 20250130000000_match_paper_chunks_rpc.sql)
 match_paper_chunks(p_paper_id, p_query_embedding vector(1536), p_match_count) → chunks
 ```
@@ -759,21 +718,14 @@ Before deploying new features:
 
 ---
 
-## Recent Changes (January 2026)
+## Recent Changes (March 2026)
 
-- ✅ **Migrated from Lovable AI Gateway to OpenAI** (gpt-4o-mini)
-- ✅ Implemented Semantic Scholar API integration (paper search)
-- ✅ Implemented arXiv API integration (preprint search)
-- ✅ Implemented HuggingFace Datasets API integration
-- ✅ Enhanced project ideas generation with LLM (includes methodology)
-- ✅ Added all missing page routes to App.tsx
-- ✅ Added TypeScript types for all 14 database tables
-- ✅ Updated profiles table types (degree_status, orcid_id, google_scholar_id)
-- ✅ Papers deduplicated and sorted by citation count
-- ✅ Research Assistant UI updated to show citations, venue, methodology
-- ✅ **ScholarGPT RAG (Tasks 3.1–3.4)**: process-paper Edge Function (PDF → chunks + embeddings), match_paper_chunks RPC, paper_chat handler in ai-lab-assistant, Paper Chat UI (processing status, page citations, View sources, New conversation), paper metadata extraction
-- ✅ **Cold Email backend**: `cold_email` handler in ai-lab-assistant with optional Semantic Scholar context
-- ✅ **Repo fixes**: `cold_emails` and `papers` TypeScript types aligned with migration (recipient_id, recipient_type, context Json, uploaded_at, file_size)
+- ✅ **ScholarGPT RAG (Tasks 3.1–3.4)**: process-paper Edge Function, match_paper_chunks RPC, paper_chat handler, Paper Chat UI
+- ✅ **Cold Email backend**: `cold_email` handler in ai-lab-assistant
+- ✅ **Smart Matchmaking (Tasks 4.1–4.3)**: Enhanced algorithm, batch-match-score Edge Function, and dashboard recommended matches.
+- ✅ **Advanced Search Filters (Task 6.1)**: Added degree_level and min_publications filters to Collaboration Board.
+- ✅ **Enhanced Profile Display (Task 6.2)**: Added metrics, research activity chart, and match scores to Public Profile page.
+- ✅ **Repo fixes**: All TypeScript types aligned with current database schema.
 
 ---
 

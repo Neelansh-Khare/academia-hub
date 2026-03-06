@@ -71,6 +71,7 @@ export type Database = {
           tools: string[] | null
           type: string
           updated_at: string
+          degree_level: string | null
         }
         Insert: {
           commitment_hours_per_week?: number | null
@@ -90,6 +91,7 @@ export type Database = {
           tools?: string[] | null
           type?: string
           updated_at?: string
+          degree_level?: string | null
         }
         Update: {
           commitment_hours_per_week?: number | null
@@ -109,6 +111,7 @@ export type Database = {
           tools?: string[] | null
           type?: string
           updated_at?: string
+          degree_level?: string | null
         }
         Relationships: []
       }
