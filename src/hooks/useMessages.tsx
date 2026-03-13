@@ -7,7 +7,7 @@ import { Database } from '@/integrations/supabase/types';
 type MessageInsert = Database['public']['Tables']['messages']['Insert'];
 type MessageRow = Database['public']['Tables']['messages']['Row'];
 
-export interface Message extends MessageRow {}
+export type Message = MessageRow;
 
 export const useMessages = (applicationId?: string) => {
   const { user } = useAuth();
@@ -46,7 +46,7 @@ export const useMessages = (applicationId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Failed to send message');
     },
   });

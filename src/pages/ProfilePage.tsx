@@ -65,7 +65,8 @@ const ProfilePage = () => {
         institution: profile.institution || '',
         department: profile.department || '',
         location: profile.location || '',
-        degree_status: (profile as any).degree_status || '',
+        // @ts-expect-error degree_status is not correctly typed in the generated types
+        degree_status: profile.degree_status || '',
         account_type: profile.account_type || 'student',
         avatar_url: profile.avatar_url || '',
         research_fields: profile.research_fields || [],
@@ -74,6 +75,7 @@ const ProfilePage = () => {
       });
       loadLinkedProfiles();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
   const loadLinkedProfiles = async () => {
@@ -108,7 +110,7 @@ const ProfilePage = () => {
       });
       setEditMode(false);
       toast.success('Profile updated successfully');
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast.error('Failed to update profile');
     }
   };
@@ -142,7 +144,7 @@ const ProfilePage = () => {
       await loadLinkedProfiles();
       setNewLinkedProfile({ platform: '', url: '', username: '' });
       toast.success('Linked profile added');
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast.error('Failed to add linked profile');
     }
   };

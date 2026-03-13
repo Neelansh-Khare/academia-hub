@@ -1,4 +1,6 @@
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// @ts-ignore
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -73,14 +75,14 @@ async function searchSemanticScholar(query: string, limit: number = 10): Promise
       return [];
     }
 
-    return data.data.map((paper: any) => ({
-      title: paper.title || 'Untitled',
-      authors: paper.authors?.map((a: any) => a.name) || [],
-      url: paper.url || (paper.externalIds?.DOI ? `https://doi.org/${paper.externalIds.DOI}` : ''),
-      abstract: paper.abstract || '',
-      year: paper.year || 0,
-      citationCount: paper.citationCount || 0,
-      venue: paper.venue || '',
+    return data.data.map((paper: Record<string, unknown>) => ({
+      title: typeof paper.title === 'string' ? paper.title : 'Untitled',
+      authors: Array.isArray(paper.authors) ? paper.authors.map((a: Record<string, unknown>) => typeof a.name === 'string' ? a.name : '').filter(Boolean) : [],
+      url: typeof paper.url === 'string' ? paper.url : (paper.externalIds && typeof (paper.externalIds as Record<string, unknown>).DOI === 'string' ? `https://doi.org/${(paper.externalIds as Record<string, unknown>).DOI}` : ''),
+      abstract: typeof paper.abstract === 'string' ? paper.abstract : '',
+      year: typeof paper.year === 'number' ? paper.year : 0,
+      citationCount: typeof paper.citationCount === 'number' ? paper.citationCount : 0,
+      venue: typeof paper.venue === 'string' ? paper.venue : '',
       source: 'semantic_scholar' as const,
     }));
   } catch (error) {
@@ -169,12 +171,12 @@ async function searchHuggingFaceDatasets(query: string, limit: number = 10): Pro
       return [];
     }
 
-    return data.map((dataset: any) => ({
-      name: dataset.id || 'Unknown',
-      description: dataset.description || dataset.cardData?.description || `Dataset for ${query}`,
+    return data.map((dataset: Record<string, unknown>) => ({
+      name: typeof dataset.id === 'string' ? dataset.id : 'Unknown',
+      description: String(typeof dataset.description === 'string' ? dataset.description : (dataset.cardData && typeof (dataset.cardData as Record<string, unknown>).description === 'string' ? (dataset.cardData as Record<string, unknown>).description : `Dataset for ${query}`)),
       url: `https://huggingface.co/datasets/${dataset.id}`,
-      downloads: dataset.downloads || 0,
-      likes: dataset.likes || 0,
+      downloads: typeof dataset.downloads === 'number' ? dataset.downloads : 0,
+      likes: typeof dataset.likes === 'number' ? dataset.likes : 0,
     }));
   } catch (error) {
     console.error('HuggingFace search error:', error);
@@ -349,17 +351,17 @@ async function handleColdEmail(
   if (recipient_name) {
     const papers = await searchSemanticScholar(recipient_name, 3);
     if (papers.length > 0) {
-      recipientResearch = `Recipient's recent work (from Semantic Scholar):\n${papers.map(p => `- "${p.title}" (${p.year})`).join('\n')}`;
+      recipientResearch = `Recipient's recent work (from Semantic Scholar):\n${papers.map((p: Paper) => `- "${p.title}" (${p.year})`).join('\n')}`;
     }
   }
 
   const profileSummary = user_profile
     ? `Sender profile: ${JSON.stringify({
-        full_name: (user_profile as any).full_name,
-        headline: (user_profile as any).headline,
-        institution: (user_profile as any).institution,
-        research_fields: (user_profile as any).research_fields,
-        bio: (user_profile as any).bio ? String((user_profile as any).bio).slice(0, 200) : '',
+        full_name: user_profile.full_name,
+        headline: user_profile.headline,
+        institution: user_profile.institution,
+        research_fields: user_profile.research_fields,
+        bio: user_profile.bio ? String(user_profile.bio).slice(0, 200) : '',
       }, null, 2)}`
     : '';
 
@@ -439,7 +441,9 @@ async function handlePaperChat(
   body: { paper_id: string; message: string },
   apiKey: string
 ): Promise<{ response: string; chunks_used: string[]; chunks?: { id: string; page_number: number | null; chunk_text: string }[] }> {
+  // @ts-ignore
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  // @ts-ignore
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -570,13 +574,14 @@ async function handleResearchAssistant(prompt: string, apiKey: string) {
 // Main Server Handler
 // ============================================
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const body = await req.json();
+    // @ts-ignore
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
     if (!OPENAI_API_KEY) {

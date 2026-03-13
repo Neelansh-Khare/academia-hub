@@ -1,4 +1,6 @@
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// @ts-ignore
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -19,7 +21,7 @@ interface Publication {
   source_id?: string;
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -32,7 +34,9 @@ serve(async (req) => {
     }
 
     // Initialize Supabase client
+    // @ts-ignore
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    // @ts-ignore
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -43,6 +47,7 @@ serve(async (req) => {
       publications = await scrapeORCIDPublications(orcid_id);
     } else if (source === "semantic_scholar" && author_name) {
       // Scrape from Semantic Scholar
+      // @ts-ignore
       const semanticScholarKey = Deno.env.get("SEMANTIC_SCHOLAR_API_KEY");
       publications = await scrapeSemanticScholarPublications(author_name, semanticScholarKey);
     } else {
@@ -75,7 +80,7 @@ serve(async (req) => {
     }
 
     const existingKeys = new Set(
-      (existingPubs || []).map((p) => `${p.title}_${p.source}_${p.source_id || ""}`)
+      (existingPubs || []).map((p: Record<string, unknown>) => `${p.title}_${p.source}_${p.source_id || ""}`)
     );
 
     const newPublications = publicationsToInsert.filter(
@@ -151,7 +156,7 @@ async function scrapeORCIDPublications(orcidId: string): Promise<Publication[]> 
       
       const urlElement = workSummary.url?.value;
       const doi = workSummary["external-ids"]?.["external-id"]
-        ?.find((id: any) => id["external-id-type"] === "doi")?.["external-id-value"];
+        ?.find((id: Record<string, unknown>) => id["external-id-type"] === "doi")?.["external-id-value"];
 
       const externalIds = workSummary["external-ids"]?.["external-id"] || [];
       const putCode = workSummary["put-code"];
@@ -217,17 +222,17 @@ async function scrapeSemanticScholarPublications(
     const papersData = await papersResponse.json();
     const papers = papersData.data || [];
 
-    const publications: Publication[] = papers.map((paper: any) => ({
-      title: paper.title || "Untitled",
-      authors: paper.authors?.map((a: any) => a.name) || [],
-      year: paper.year || undefined,
-      url: paper.url || undefined,
-      doi: paper.externalIds?.DOI || undefined,
-      abstract: paper.abstract || undefined,
-      citation_count: paper.citationCount || 0,
-      venue: paper.venue || undefined,
+    const publications: Publication[] = papers.map((paper: Record<string, unknown>) => ({
+      title: typeof paper.title === 'string' ? paper.title : "Untitled",
+      authors: Array.isArray(paper.authors) ? paper.authors.map((a: Record<string, unknown>) => typeof a.name === 'string' ? a.name : '').filter(Boolean) : [],
+      year: typeof paper.year === 'number' ? paper.year : undefined,
+      url: typeof paper.url === 'string' ? paper.url : undefined,
+      doi: paper.externalIds && typeof (paper.externalIds as Record<string, unknown>).DOI === 'string' ? (paper.externalIds as Record<string, unknown>).DOI : undefined,
+      abstract: typeof paper.abstract === 'string' ? paper.abstract : undefined,
+      citation_count: typeof paper.citationCount === 'number' ? paper.citationCount : 0,
+      venue: typeof paper.venue === 'string' ? paper.venue : undefined,
       source: "semantic_scholar",
-      source_id: paper.paperId,
+      source_id: typeof paper.paperId === 'string' ? paper.paperId : undefined,
     }));
 
     return publications;

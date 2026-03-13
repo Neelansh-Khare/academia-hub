@@ -31,6 +31,7 @@ interface ColdEmail {
   body: string;
   recipient_name: string | null;
   recipient_email: string | null;
+  recipient_type?: string;
   tone: string;
   created_at: string;
 }
@@ -52,6 +53,7 @@ const ColdEmailGenerator = () => {
     if (user) {
       loadSavedEmails();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const loadSavedEmails = async () => {
@@ -66,7 +68,7 @@ const ColdEmailGenerator = () => {
 
       if (error) throw error;
       setSavedEmails(data || []);
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Failed to load saved emails:', error);
     }
   };
@@ -129,7 +131,7 @@ const ColdEmailGenerator = () => {
 
       await loadSavedEmails();
       toast.success('Email generated and saved!');
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Email generation error:', error);
       // Fallback mock email
       setGeneratedEmail({
@@ -166,7 +168,7 @@ const ColdEmailGenerator = () => {
       if (error) throw error;
       toast.success('Email saved!');
       await loadSavedEmails();
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast.error('Failed to save email');
     }
   };
@@ -210,7 +212,7 @@ const ColdEmailGenerator = () => {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label>Recipient Type</Label>
-                  <Select value={recipientType} onValueChange={(v: any) => setRecipientType(v)}>
+                  <Select value={recipientType} onValueChange={(v: 'professor' | 'lab' | 'student') => setRecipientType(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -224,7 +226,7 @@ const ColdEmailGenerator = () => {
 
                 <div>
                   <Label>Tone</Label>
-                  <Select value={tone} onValueChange={(v: any) => setTone(v)}>
+                  <Select value={tone} onValueChange={(v: 'formal' | 'friendly' | 'curious') => setTone(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -352,7 +354,9 @@ const ColdEmailGenerator = () => {
                         setGeneratedEmail({ subject: email.subject, body: email.body });
                         setRecipientName(email.recipient_name || '');
                         setRecipientEmail(email.recipient_email || '');
-                        setTone(email.tone as any);
+                        if (['formal', 'friendly', 'curious'].includes(email.tone)) {
+                          setTone(email.tone as 'formal' | 'friendly' | 'curious');
+                        }
                       }}
                     >
                       <div className="flex items-start justify-between gap-2">

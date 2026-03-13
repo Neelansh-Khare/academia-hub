@@ -101,7 +101,7 @@ const ResearchAssistant = () => {
       });
 
       toast.success('Research roadmap generated successfully!');
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Research assistant error:', error);
       // Fallback mock data for development
       const mockOutput: ResearchOutput = {

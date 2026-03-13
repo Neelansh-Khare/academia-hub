@@ -35,7 +35,6 @@ This document outlines how to incorporate the remaining features from the PRD in
 - **Profile Page**: UI complete, publications tab works, linked profiles partial
 
 ### ❌ Not Yet Implemented
-- Real-time professor-student chat
 - Calendar sync and timeline planning
 - Collaborative document editor
 - Community Q&A board
@@ -80,6 +79,7 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 | `/assistant` | ResearchAssistant | ✅ Routed |
 | `/paper-chat` | PaperChat | ✅ Routed |
 | `/cold-email` | ColdEmailGenerator | ✅ Routed |
+| `/messages` | Messages | ✅ Ready |
 
 ---
 
@@ -364,7 +364,7 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 
 **Task 7.1: Implement Real-time Messaging**
 - **Priority**: Low (Stretch Goal)
-- **Status**: ❌ Not Started
+- **Status**: ✅ Completed
 - **Tech Stack Options**:
   - Supabase Realtime (recommended - already using Supabase)
   - Socket.io with separate WebSocket server
@@ -394,7 +394,7 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 
 **Task 7.2: Professor-Student Chat Interface**
 - **Priority**: Low
-- **Status**: ❌ Not Started
+- **Status**: ✅ Completed
 - **Implementation Steps**:
   1. Add "Messages" page to dashboard
   2. Show conversations list
@@ -711,7 +711,7 @@ Before deploying new features:
 7. Public profile views
 
 **Nice to Have (P2)** - Stretch goals:
-8. Real-time chat
+8. ~~Real-time chat~~ ✅
 9. Calendar sync
 10. Collaborative editor
 11. Community Q&A
@@ -720,12 +720,13 @@ Before deploying new features:
 
 ## Recent Changes (March 2026)
 
+- ✅ **Messages & Real-time Chat (Tasks 7.1-7.2)**: Built a `/messages` route serving a unified dual-pane message interface connecting researchers seamlessly via Supabase Realtime subscriptions.
 - ✅ **ScholarGPT RAG (Tasks 3.1–3.4)**: process-paper Edge Function, match_paper_chunks RPC, paper_chat handler, Paper Chat UI
 - ✅ **Cold Email backend**: `cold_email` handler in ai-lab-assistant
 - ✅ **Smart Matchmaking (Tasks 4.1–4.3)**: Enhanced algorithm, batch-match-score Edge Function, and dashboard recommended matches.
 - ✅ **Advanced Search Filters (Task 6.1)**: Added degree_level and min_publications filters to Collaboration Board.
 - ✅ **Enhanced Profile Display (Task 6.2)**: Added metrics, research activity chart, and match scores to Public Profile page.
-- ✅ **Repo fixes**: All TypeScript types aligned with current database schema.
+- ✅ **Repo fixes**: All TypeScript types aligned with current database schema, any type linting errors fixed, and build errors resolved.
 
 ---
 

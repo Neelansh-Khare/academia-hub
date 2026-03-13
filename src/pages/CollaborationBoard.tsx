@@ -24,7 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, MapPin, Clock, DollarSign, Briefcase, Plus, Filter, TrendingUp, User } from 'lucide-react';
+import { Search, MapPin, Clock, DollarSign, Briefcase, Plus, Filter, TrendingUp, User, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
 import { useMatchScores } from '@/hooks/useMatchScores';
@@ -62,6 +62,7 @@ const CollaborationBoard = () => {
 
   useEffect(() => {
     fetchPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter, degreeFilter, remoteFilter, paidFilter, institutionFilter, locationFilter, showMatchScores, profile]);
 
   const fetchPosts = async () => {
@@ -167,7 +168,7 @@ const CollaborationBoard = () => {
       }
 
       setPosts(postsWithMatches);
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast.error('Failed to load opportunities');
       console.error(error);
     } finally {
@@ -179,7 +180,11 @@ const CollaborationBoard = () => {
     e.stopPropagation();
     if (!profile) return;
     
-    const result = await calculateMatchScore(post.id, profile, post);
+    // Convert to Record<string, unknown> to satisfy calculateMatchScore
+    const profileRecord = profile as unknown as Record<string, unknown>;
+    const postRecord = post as unknown as Record<string, unknown>;
+    
+    const result = await calculateMatchScore(post.id, profileRecord, postRecord);
     if (result) {
       // Update local state
       setPosts(posts.map(p => p.id === post.id ? { 
@@ -224,7 +229,7 @@ const CollaborationBoard = () => {
       setApplicationMessage('');
       setCvUrl('');
       setSelectedPost(null);
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast.error('Failed to submit application');
       console.error(error);
     }

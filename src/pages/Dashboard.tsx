@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { GraduationCap, Search, FileText, Bot, LogOut, User, Zap } from 'lucide-react';
+import { GraduationCap, Search, FileText, Bot, LogOut, User, Zap, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMatchScores } from '@/hooks/useMatchScores';
 import { Progress } from '@/components/ui/progress';
@@ -25,7 +25,7 @@ const Dashboard = () => {
       await signOut();
       toast.success('Signed out successfully');
       navigate('/');
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast.error('Failed to sign out');
     }
   };
@@ -119,6 +119,18 @@ const Dashboard = () => {
                 <CardTitle className="font-display">Profile settings</CardTitle>
                 <CardDescription>
                   Update your research profile and preferences
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-border/50 hover:shadow-elevated transition-shadow cursor-pointer group" onClick={() => navigate('/messages')}>
+              <CardHeader>
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                </div>
+                <CardTitle className="font-display">Messages</CardTitle>
+                <CardDescription>
+                  Communicate with researchers and view applications
                 </CardDescription>
               </CardHeader>
             </Card>

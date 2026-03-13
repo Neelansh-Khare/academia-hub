@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ExternalLink, FileText, Loader2, Mail, MapPin, Building, GraduationCap, ChevronLeft, TrendingUp, BarChart3, Quote } from 'lucide-react';
+import { ExternalLink, FileText, Loader2, Mail, MapPin, Building, GraduationCap, ChevronLeft, TrendingUp, BarChart3, Quote, MessageSquare } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -31,7 +31,8 @@ const PublicProfile = () => {
   const [matchScore, setMatchScore] = useState<{ score: number; explanation: string } | null>(null);
 
   // Parse state from location (if coming from collaboration board)
-  const sourcePostId = (location.state as any)?.postId;
+  const locationState = location.state as { postId?: string } | null;
+  const sourcePostId = locationState?.postId;
 
   useEffect(() => {
     const loadLinkedProfiles = async () => {
@@ -192,9 +193,19 @@ const PublicProfile = () => {
               )}
 
               <div className="mt-8">
-                <Button className="w-full gap-2">
-                  <Mail className="w-4 h-4" />
-                  Contact
+                <Button 
+                  className="w-full gap-2"
+                  onClick={() => {
+                    if (!user) {
+                      navigate('/auth');
+                    } else if (user.id !== id) {
+                      navigate(`/messages?user_id=${id}`);
+                    }
+                  }}
+                  disabled={user && user.id === id}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Message
                 </Button>
               </div>
             </CardContent>

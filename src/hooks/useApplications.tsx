@@ -7,7 +7,7 @@ import { Database } from '@/integrations/supabase/types';
 type ApplicationInsert = Database['public']['Tables']['applications']['Insert'];
 type ApplicationRow = Database['public']['Tables']['applications']['Row'];
 
-export interface Application extends ApplicationRow {}
+export type Application = ApplicationRow;
 
 export const useApplications = (postId?: string) => {
   const { user } = useAuth();
@@ -49,8 +49,8 @@ export const useApplications = (postId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['applications'] });
       toast.success('Application submitted successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to submit application');
+    onError: (error: Error | unknown) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to submit application');
     },
   });
 

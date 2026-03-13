@@ -7,7 +7,7 @@ import { Database } from '@/integrations/supabase/types';
 type LabPostInsert = Database['public']['Tables']['lab_posts']['Insert'];
 type LabPostRow = Database['public']['Tables']['lab_posts']['Row'];
 
-export interface LabPost extends LabPostRow {}
+export type LabPost = LabPostRow;
 
 export const useLabPosts = (filters?: { type?: string; search?: string }) => {
   const { user } = useAuth();
@@ -52,8 +52,8 @@ export const useLabPosts = (filters?: { type?: string; search?: string }) => {
       queryClient.invalidateQueries({ queryKey: ['lab_posts'] });
       toast.success('Post created successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to create post');
+    onError: (error: Error | unknown) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to create post');
     },
   });
 
@@ -73,8 +73,8 @@ export const useLabPosts = (filters?: { type?: string; search?: string }) => {
       queryClient.invalidateQueries({ queryKey: ['lab_posts'] });
       toast.success('Post updated successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update post');
+    onError: (error: Error | unknown) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to update post');
     },
   });
 
@@ -91,8 +91,8 @@ export const useLabPosts = (filters?: { type?: string; search?: string }) => {
       queryClient.invalidateQueries({ queryKey: ['lab_posts'] });
       toast.success('Post deleted successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to delete post');
+    onError: (error: Error | unknown) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete post');
     },
   });
 

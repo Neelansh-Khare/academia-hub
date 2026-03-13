@@ -27,7 +27,7 @@ export const Layout = ({ children }: LayoutProps) => {
       await signOut();
       toast.success('Signed out successfully');
       navigate('/');
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast.error('Failed to sign out');
     }
   };

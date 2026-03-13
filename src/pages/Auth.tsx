@@ -33,8 +33,8 @@ const Auth = () => {
         toast.success('Welcome back!');
         navigate('/dashboard');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
+    } catch (error: Error | unknown) {
+      toast.error(error instanceof Error ? error.message : 'Authentication failed');
     } finally {
       setLoading(false);
     }

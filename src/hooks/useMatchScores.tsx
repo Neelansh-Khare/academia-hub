@@ -17,7 +17,7 @@ export const useMatchScores = () => {
   const [matchScores, setMatchScores] = useState<MatchScoreWithPost[]>([]);
   const [isLoadingScores, setIsLoadingScores] = useState(false);
 
-  const calculateMatchScore = async (postId: string, profileFields: any, postFields: any) => {
+  const calculateMatchScore = async (postId: string, profileFields: Record<string, unknown>, postFields: Record<string, unknown>) => {
     if (!user) {
       toast.error('Please sign in to calculate match scores');
       return null;
@@ -53,7 +53,7 @@ export const useMatchScores = () => {
       await fetchMatchScores();
 
       return data;
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Error calculating match score:', error);
       toast.error('Failed to calculate AI match score');
       return null;
@@ -75,7 +75,7 @@ export const useMatchScores = () => {
 
       if (error) throw error;
       setMatchScores(data as MatchScoreWithPost[]);
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Error fetching match scores:', error);
       toast.error('Failed to load recommended matches');
     } finally {

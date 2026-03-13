@@ -60,6 +60,7 @@ const PaperChat = () => {
     if (user) {
       loadPapers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
@@ -75,6 +76,7 @@ const PaperChat = () => {
       clearInterval(interval);
       pollIntervalRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processingPaperId, user]);
 
   // Clear processing state when paper becomes processed
@@ -95,7 +97,7 @@ const PaperChat = () => {
 
       if (error) throw error;
       setPapers(data || []);
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Failed to load papers:', error);
     }
   };
@@ -164,7 +166,7 @@ const PaperChat = () => {
         setProcessingPaperId(null);
         loadPapers();
       });
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast.error('Failed to upload paper');
       console.error(error);
     } finally {
@@ -211,7 +213,7 @@ const PaperChat = () => {
           })));
         }
       }
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Failed to load conversation:', error);
     }
   };
@@ -301,7 +303,7 @@ const PaperChat = () => {
         content: assistantMessage.content,
         chunks_used: aiResponse.chunks_used || [],
       });
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Chat error:', error);
       const errorMessage: Message = {
         id: `error-${Date.now()}`,

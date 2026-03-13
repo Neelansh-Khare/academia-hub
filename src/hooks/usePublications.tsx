@@ -51,7 +51,7 @@ export const usePublications = (userId?: string) => {
     }) => {
       if (!user?.id) throw new Error('Not authenticated');
 
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         source,
         user_id: user.id,
       };
@@ -75,9 +75,9 @@ export const usePublications = (userId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['publications', user?.id] });
       toast.success(`Synced ${data.new_added} new publications from ${data.total_found} found`);
     },
-    onError: (error: any) => {
+    onError: (error: Error | unknown) => {
       console.error('Sync publications error:', error);
-      toast.error(error.message || 'Failed to sync publications');
+      toast.error(error instanceof Error ? error.message : 'Failed to sync publications');
     },
   });
 
@@ -97,7 +97,7 @@ export const usePublications = (userId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['publications', user?.id] });
       toast.success('Publication removed');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Failed to remove publication');
     },
   });
