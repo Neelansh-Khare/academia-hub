@@ -12,8 +12,9 @@ This document outlines how to incorporate the remaining features from the PRD in
 - Paper chat UI (upload and chat interface)
 - Research assistant UI
 - Profile management with research fields, methods, tools
-- Linked profiles (manual linking)
+- Linked profiles (manual linking and **deletion management** ✅)
 - **Publication auto-scraping** (ORCID & Semantic Scholar) ✅
+- **BibTeX Export** (for publications on private and public profiles) ✅
 - **Research Assistant API integrations** ✅:
   - Semantic Scholar API for paper discovery
   - arXiv API for preprints
@@ -22,23 +23,25 @@ This document outlines how to incorporate the remaining features from the PRD in
 - **All page routes configured** ✅
 - **TypeScript types for all 14 database tables** ✅
 
-### ✅ Recently Completed (Tasks 3.1–3.4, 4.1–4.3, 5.1, 6.1, 6.2 + Repo Fixes)
+### ✅ Recently Completed (Tasks 3.1–3.4, 4.1–4.3, 5.1, 6.1, 6.2, 9.2-partial + Repo Fixes)
 - **ScholarGPT (Paper Chat)**: ✅ Full RAG pipeline (process-paper PDF → chunks → embeddings, paper_chat handler with vector search, UI: processing status, page citations, View Source, new conversation)
 - **Smart Matchmaking (Tasks 4.1-4.3)**: ✅ Enhanced scoring algorithm (Keyword, Skills, Proximity, LLM), batch match scoring Edge Function (`batch-match-score`), and dashboard integration.
 - **Cold Email Generator**: ✅ Backend handler in `ai-lab-assistant` (type: `cold_email`), optional Semantic Scholar context
 - **Advanced Search Filters (Task 6.1)**: ✅ Filters for Degree Level, Minimum Publication Count, Institution, and Location.
 - **Enhanced Profile Display (Task 6.2)**: ✅ Public profiles with Citation Metrics (h-index, i10-index), Research Activity Charts (recharts), and context-aware Match Scores.
+- **Profile Management**: ✅ Added **Linked Profile Deletion** and unique ID tracking for all external links.
+- **Academic Export**: ✅ **BibTeX Export** utility implemented and integrated into all profile views.
 - **TypeScript types**: ✅ `cold_emails`, `papers`, and `lab_posts` (`degree_level`) in `types.ts` aligned with migration.
 - **RPC**: ✅ `match_paper_chunks(paper_id, query_embedding, match_count)` for vector similarity search
 
 ### 🟡 Partially Implemented (Needs Enhancement)
-- **Profile Page**: UI complete, publications tab works, linked profiles partial
+- *No high-priority MVP items remaining in this category.*
 
 ### ❌ Not Yet Implemented
 - Calendar sync and timeline planning
 - Collaborative document editor
 - Community Q&A board
-- Integration with Notion/Obsidian
+- Integration with Notion/Obsidian (Full sync)
 
 ---
 
