@@ -608,6 +608,80 @@ export type Database = {
           }
         ]
       }
+      research_timelines: {
+        Row: {
+          id: string
+          user_id: string
+          project_id: string | null
+          title: string
+          description: string | null
+          status: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          project_id?: string | null
+          title: string
+          description?: string | null
+          status?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          project_id?: string | null
+          title?: string
+          description?: string | null
+          status?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      research_milestones: {
+        Row: {
+          id: string
+          timeline_id: string
+          title: string
+          description: string | null
+          due_date: string | null
+          status: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          timeline_id: string
+          title: string
+          description?: string | null
+          due_date?: string | null
+          status?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          timeline_id?: string
+          title?: string
+          description?: string | null
+          due_date?: string | null
+          status?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "research_milestones_timeline_id_fkey"
+            columns: ["timeline_id"]
+            isOneToOne: false
+            referencedRelation: "research_timelines"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

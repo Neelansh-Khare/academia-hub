@@ -134,6 +134,18 @@ const Dashboard = () => {
                 </CardDescription>
               </CardHeader>
             </Card>
+
+            <Card className="border-border/50 hover:shadow-elevated transition-shadow cursor-pointer group" onClick={() => navigate('/timeline')}>
+              <CardHeader>
+                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center mb-2 group-hover:bg-accent/20 transition-colors">
+                  <Clock className="w-5 h-5 text-accent" />
+                </div>
+                <CardTitle className="font-display">Research Timelines</CardTitle>
+                <CardDescription>
+                  Plan milestones and track your research progress
+                </CardDescription>
+              </CardHeader>
+            </Card>
           </div>
 
           {/* Recommended Matches Section */}

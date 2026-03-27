@@ -12,7 +12,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 - Paper chat UI (upload and chat interface)
 - Research assistant UI
 - Profile management with research fields, methods, tools
-- Linked profiles (manual linking)
+- Linked profiles (full support with add/remove) ✅
 - **Publication auto-scraping** (ORCID & Semantic Scholar) ✅
 - **Research Assistant API integrations** ✅:
   - Semantic Scholar API for paper discovery
@@ -20,22 +20,23 @@ This document outlines how to incorporate the remaining features from the PRD in
   - HuggingFace Datasets API for dataset discovery
   - LLM-powered project ideas and outline generation
 - **All page routes configured** ✅
-- **TypeScript types for all 14 database tables** ✅
+- **TypeScript types for all 16 database tables** ✅
+- **Real-time Messaging** ✅
 
-### ✅ Recently Completed (Tasks 3.1–3.4, 4.1–4.3, 5.1, 6.1, 6.2 + Repo Fixes)
-- **ScholarGPT (Paper Chat)**: ✅ Full RAG pipeline (process-paper PDF → chunks → embeddings, paper_chat handler with vector search, UI: processing status, page citations, View Source, new conversation)
-- **Smart Matchmaking (Tasks 4.1-4.3)**: ✅ Enhanced scoring algorithm (Keyword, Skills, Proximity, LLM), batch match scoring Edge Function (`batch-match-score`), and dashboard integration.
-- **Cold Email Generator**: ✅ Backend handler in `ai-lab-assistant` (type: `cold_email`), optional Semantic Scholar context
-- **Advanced Search Filters (Task 6.1)**: ✅ Filters for Degree Level, Minimum Publication Count, Institution, and Location.
-- **Enhanced Profile Display (Task 6.2)**: ✅ Public profiles with Citation Metrics (h-index, i10-index), Research Activity Charts (recharts), and context-aware Match Scores.
-- **TypeScript types**: ✅ `cold_emails`, `papers`, and `lab_posts` (`degree_level`) in `types.ts` aligned with migration.
-- **RPC**: ✅ `match_paper_chunks(paper_id, query_embedding, match_count)` for vector similarity search
+### ✅ Recently Completed (Tasks 3.1–3.4, 4.1–4.3, 5.1, 6.1, 6.2, 7.1, 7.2, 8.1 (initial))
+- **ScholarGPT (Paper Chat)**: ✅ Full RAG pipeline
+- **Smart Matchmaking**: ✅ Enhanced scoring algorithm
+- **Cold Email Generator**: ✅ Backend and UI
+- **Advanced Search Filters**: ✅ Collaboration board filters
+- **Enhanced Profile Display**: ✅ Metrics and charts
+- **Real-time Chat**: ✅ Messaging interface
+- **Research Timelines (Task 8.1 initial)**: ✅ Schema and UI for tracking projects and milestones
 
 ### 🟡 Partially Implemented (Needs Enhancement)
-- **Profile Page**: UI complete, publications tab works, linked profiles partial
+- **Profile Page**: UI complete, publications tab works
 
 ### ❌ Not Yet Implemented
-- Calendar sync and timeline planning
+- Calendar sync (Google/Outlook)
 - Collaborative document editor
 - Community Q&A board
 - Integration with Notion/Obsidian
@@ -408,24 +409,24 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 
 **Task 8.1: Calendar Integration**
 - **Priority**: Low (Stretch Goal)
-- **Status**: ❌ Not Started
+- **Status**: 🟡 Partially Implemented (Initial DB Schema and Timeline Page ready)
 - **Implementation Steps**:
   1. Integrate Google Calendar API or CalDAV
-  2. Create `research_timelines` table:
+  2. Create `research_timelines` table: ✅ Done
      - user_id, project_id (optional)
      - milestone_name, due_date
      - description
   3. Sync deadlines for applications, projects, papers
-  4. Create timeline visualization component
+  4. Create timeline visualization component: ✅ Done
   5. Add reminders and notifications
 
 **Task 8.2: Research Timeline Planner**
 - **Priority**: Low
-- **Status**: ❌ Not Started
+- **Status**: 🟡 Partially Implemented (Timeline Page ready)
 - **Implementation Steps**:
-  1. Create timeline UI component
-  2. Allow users to create research projects
-  3. Break down into phases (literature review, data collection, writing, etc.)
+  1. Create timeline UI component: ✅ Done
+  2. Allow users to create research projects: ✅ Done
+  3. Break down into phases (literature review, data collection, writing, etc.): ✅ Done (via milestones)
   4. Suggest timeline based on similar projects
   5. Integrate with calendar
 

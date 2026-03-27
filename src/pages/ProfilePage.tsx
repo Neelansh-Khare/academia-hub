@@ -52,7 +52,7 @@ const ProfilePage = () => {
   const [newTag, setNewTag] = useState('');
   const [tagType, setTagType] = useState<'research_fields' | 'methods' | 'tools'>('research_fields');
   const [linkedProfiles, setLinkedProfiles] = useState<
-    Array<{ platform: string; url: string; username?: string }>
+    Array<{ id: string; platform: string; url: string; username?: string }>
   >([]);
   const [newLinkedProfile, setNewLinkedProfile] = useState({ platform: '', url: '', username: '' });
 
@@ -86,7 +86,7 @@ const ProfilePage = () => {
         .select('*')
         .eq('user_id', user.id);
       if (data) {
-        setLinkedProfiles(data.map((lp) => ({ platform: lp.platform, url: lp.url, username: lp.username || '' })));
+        setLinkedProfiles(data.map((lp) => ({ id: lp.id, platform: lp.platform, url: lp.url, username: lp.username || '' })));
         
         // Auto-populate ORCID ID from linked profiles
         const orcidProfile = data.find((lp) => lp.platform === 'orcid');
@@ -146,6 +146,20 @@ const ProfilePage = () => {
       toast.success('Linked profile added');
     } catch (error: Error | unknown) {
       toast.error('Failed to add linked profile');
+    }
+  };
+
+  const handleRemoveLinkedProfile = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('linked_profiles')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      await loadLinkedProfiles();
+      toast.success('Linked profile removed');
+    } catch (error) {
+      toast.error('Failed to remove linked profile');
     }
   };
 
@@ -584,8 +598,8 @@ const ProfilePage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                {linkedProfiles.map((lp, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                {linkedProfiles.map((lp) => (
+                  <div key={lp.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-2">
                       <Link2 className="w-4 h-4 text-muted-foreground" />
                       <span className="font-medium capitalize">{lp.platform.replace('_', ' ')}</span>
@@ -599,6 +613,16 @@ const ProfilePage = () => {
                         View <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
+                    {editMode && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveLinkedProfile(lp.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
