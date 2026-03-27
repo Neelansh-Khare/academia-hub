@@ -23,9 +23,10 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Plus, X, Link2, ExternalLink, Save, RefreshCw, FileText, Loader2, Trash2 } from 'lucide-react';
+import { Plus, X, Link2, ExternalLink, Save, RefreshCw, FileText, Loader2, Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { exportToBibTeX } from '@/lib/utils';
 
 const ProfilePage = () => {
   const { user } = useAuth();
@@ -86,7 +87,12 @@ const ProfilePage = () => {
         .select('*')
         .eq('user_id', user.id);
       if (data) {
-        setLinkedProfiles(data.map((lp) => ({ id: lp.id, platform: lp.platform, url: lp.url, username: lp.username || '' })));
+        setLinkedProfiles(data.map((lp) => ({ 
+          id: lp.id,
+          platform: lp.platform, 
+          url: lp.url || '', 
+          username: lp.username || '' 
+        })));
         
         // Auto-populate ORCID ID from linked profiles
         const orcidProfile = data.find((lp) => lp.platform === 'orcid');
@@ -156,7 +162,7 @@ const ProfilePage = () => {
         .delete()
         .eq('id', id);
       if (error) throw error;
-      await loadLinkedProfiles();
+      setLinkedProfiles((prev) => prev.filter((lp) => lp.id !== id));
       toast.success('Linked profile removed');
     } catch (error) {
       toast.error('Failed to remove linked profile');
@@ -421,32 +427,43 @@ const ProfilePage = () => {
                   <CardTitle>Publications</CardTitle>
                   <CardDescription>Your research publications and papers</CardDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (syncSource === 'orcid' && orcidId) {
-                      syncPublications({ source: 'orcid', orcidId });
-                    } else if (syncSource === 'semantic_scholar' && authorName) {
-                      syncPublications({ source: 'semantic_scholar', authorName });
-                    } else {
-                      toast.error('Please provide ORCID ID or Author Name');
-                    }
-                  }}
-                  disabled={isSyncing}
-                >
-                  {isSyncing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Syncing...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Sync Publications
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportToBibTeX(publications, `${profile?.full_name?.replace(/\s+/g, '_')}_publications.bib`)}
+                    disabled={publications.length === 0}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export BibTeX
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (syncSource === 'orcid' && orcidId) {
+                        syncPublications({ source: 'orcid', orcidId });
+                      } else if (syncSource === 'semantic_scholar' && authorName) {
+                        syncPublications({ source: 'semantic_scholar', authorName });
+                      } else {
+                        toast.error('Please provide ORCID ID or Author Name');
+                      }
+                    }}
+                    disabled={isSyncing}
+                  >
+                    {isSyncing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Syncing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Sync Publications
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -618,7 +635,7 @@ const ProfilePage = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveLinkedProfile(lp.id)}
-                        className="text-destructive hover:text-destructive"
+                        className="text-destructive hover:text-destructive h-8 w-8 p-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -676,4 +693,3 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
-

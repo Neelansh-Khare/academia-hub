@@ -12,11 +12,12 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ExternalLink, FileText, Loader2, Mail, MapPin, Building, GraduationCap, ChevronLeft, TrendingUp, BarChart3, Quote, MessageSquare } from 'lucide-react';
+import { ExternalLink, FileText, Loader2, Mail, MapPin, Building, GraduationCap, ChevronLeft, TrendingUp, BarChart3, Quote, MessageSquare, Download } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
+import { exportToBibTeX } from '@/lib/utils';
 
 const PublicProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,7 +27,7 @@ const PublicProfile = () => {
   const { data: profile, isLoading: profileLoading } = usePublicProfile(id);
   const { publications, isLoading: publicationsLoading } = usePublications(id);
   const [linkedProfiles, setLinkedProfiles] = useState<
-    Array<{ platform: string; url: string; username?: string }>
+    Array<{ id: string; platform: string; url: string; username?: string }>
   >([]);
   const [matchScore, setMatchScore] = useState<{ score: number; explanation: string } | null>(null);
 
@@ -43,7 +44,12 @@ const PublicProfile = () => {
           .select('*')
           .eq('user_id', id);
         if (data) {
-          setLinkedProfiles(data.map((lp) => ({ platform: lp.platform, url: lp.url, username: lp.username || '' })));
+          setLinkedProfiles(data.map((lp) => ({ 
+            id: lp.id,
+            platform: lp.platform, 
+            url: lp.url || '', 
+            username: lp.username || '' 
+          })));
         }
       } catch (error) {
         console.error('Failed to load linked profiles:', error);
@@ -371,6 +377,18 @@ const PublicProfile = () => {
             </TabsContent>
 
             <TabsContent value="publications" className="mt-6">
+              {!publicationsLoading && publications.length > 0 && (
+                <div className="flex justify-end mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportToBibTeX(publications, `${profile.full_name?.replace(/\s+/g, '_')}_publications.bib`)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export BibTeX
+                  </Button>
+                </div>
+              )}
               {publicationsLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

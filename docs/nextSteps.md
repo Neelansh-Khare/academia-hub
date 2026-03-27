@@ -12,8 +12,9 @@ This document outlines how to incorporate the remaining features from the PRD in
 - Paper chat UI (upload and chat interface)
 - Research assistant UI
 - Profile management with research fields, methods, tools
-- Linked profiles (full support with add/remove) ✅
+- Linked profiles (full support with add/remove and **deletion management** ✅)
 - **Publication auto-scraping** (ORCID & Semantic Scholar) ✅
+- **BibTeX Export** (for publications on private and public profiles) ✅
 - **Research Assistant API integrations** ✅:
   - Semantic Scholar API for paper discovery
   - arXiv API for preprints
@@ -23,7 +24,7 @@ This document outlines how to incorporate the remaining features from the PRD in
 - **TypeScript types for all 16 database tables** ✅
 - **Real-time Messaging** ✅
 
-### ✅ Recently Completed (Tasks 3.1–3.4, 4.1–4.3, 5.1, 6.1, 6.2, 7.1, 7.2, 8.1 (initial))
+### ✅ Recently Completed (Tasks 3.1–3.4, 4.1–4.3, 5.1, 6.1, 6.2, 7.1, 7.2, 8.1 (initial), 9.2-partial)
 - **ScholarGPT (Paper Chat)**: ✅ Full RAG pipeline
 - **Smart Matchmaking**: ✅ Enhanced scoring algorithm
 - **Cold Email Generator**: ✅ Backend and UI
@@ -31,15 +32,19 @@ This document outlines how to incorporate the remaining features from the PRD in
 - **Enhanced Profile Display**: ✅ Metrics and charts
 - **Real-time Chat**: ✅ Messaging interface
 - **Research Timelines (Task 8.1 initial)**: ✅ Schema and UI for tracking projects and milestones
+- **Profile Management**: ✅ Added **Linked Profile Deletion** and unique ID tracking for all external links.
+- **Academic Export**: ✅ **BibTeX Export** utility implemented and integrated into all profile views.
+- **TypeScript types**: ✅ `cold_emails`, `papers`, and `lab_posts` (`degree_level`) in `types.ts` aligned with migration.
+- **RPC**: ✅ `match_paper_chunks(paper_id, query_embedding, match_count)` for vector similarity search
 
 ### 🟡 Partially Implemented (Needs Enhancement)
-- **Profile Page**: UI complete, publications tab works
+- *No high-priority MVP items remaining in this category.*
 
 ### ❌ Not Yet Implemented
 - Calendar sync (Google/Outlook)
 - Collaborative document editor
 - Community Q&A board
-- Integration with Notion/Obsidian
+- Integration with Notion/Obsidian (Full sync)
 
 ---
 
@@ -462,7 +467,7 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
   1. Create export functionality:
      - Export research roadmap to Notion page
      - Export paper summaries to Obsidian notes
-     - Export bibliography to BibTeX
+     - Export bibliography to BibTeX: ✅ Done
   2. Add import functionality (if APIs available)
   3. Two-way sync (if feasible)
 
@@ -727,6 +732,8 @@ Before deploying new features:
 - ✅ **Smart Matchmaking (Tasks 4.1–4.3)**: Enhanced algorithm, batch-match-score Edge Function, and dashboard recommended matches.
 - ✅ **Advanced Search Filters (Task 6.1)**: Added degree_level and min_publications filters to Collaboration Board.
 - ✅ **Enhanced Profile Display (Task 6.2)**: Added metrics, research activity chart, and match scores to Public Profile page.
+- ✅ **Research Timelines (Task 8.1 initial)**: Built schema and UI for tracking projects and milestones.
+- ✅ **Profile Management**: Added BibTeX export and linked profile deletion.
 - ✅ **Repo fixes**: All TypeScript types aligned with current database schema, any type linting errors fixed, and build errors resolved.
 
 ---
