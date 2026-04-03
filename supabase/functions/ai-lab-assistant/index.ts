@@ -571,6 +571,61 @@ async function handleResearchAssistant(prompt: string, apiKey: string) {
 }
 
 // ============================================
+// Research Timeline Generation
+// ============================================
+
+async function handleGenerateTimeline(
+  body: { title: string; description?: string },
+  apiKey: string
+): Promise<{ milestones: { title: string; description: string }[] }> {
+  const { title, description } = body;
+
+  const systemPrompt = `You are an expert research advisor. Generate a structured timeline of 5-6 key milestones for a research project. Respond with valid JSON only.`;
+
+  const userPrompt = `Project Title: "${title}"
+${description ? `Description: "${description}"` : ""}
+
+Generate a JSON response with a "milestones" array. Each milestone must have:
+- "title": A concise, actionable title (e.g., "Literature Review Completion", "Data Collection Phase 1")
+- "description": A brief explanation of what needs to be achieved in this milestone (1-2 sentences)
+
+Respond ONLY with valid JSON, no markdown code blocks.`;
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    console.error(`OpenAI API error: ${response.status}`);
+    throw new Error("OpenAI API error");
+  }
+
+  const data = await response.json();
+  const content = (data.choices?.[0]?.message?.content || "").trim();
+  
+  let jsonStr = content;
+  if (jsonStr.startsWith("```")) {
+    jsonStr = jsonStr.replace(/^```\w*\n?/, "").replace(/\n?```$/, "");
+  }
+  
+  const parsed = JSON.parse(jsonStr);
+  return {
+    milestones: parsed.milestones || [],
+  };
+}
+
+// ============================================
 // Main Server Handler
 // ============================================
 
@@ -586,6 +641,20 @@ serve(async (req: Request) => {
 
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not configured");
+    }
+
+    // Handle generate_timeline type requests
+    if (body.type === 'generate_timeline' && body.title) {
+      console.log("Generating timeline for:", body.title);
+
+      const result = await handleGenerateTimeline(
+        { title: body.title, description: body.description },
+        OPENAI_API_KEY
+      );
+
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Handle research_assistant type requests

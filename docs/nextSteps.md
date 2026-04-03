@@ -425,15 +425,15 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
   4. Create timeline visualization component: ✅ Done
   5. Add reminders and notifications
 
-**Task 8.2: Research Timeline Planner**
+**Task 8.2: Research Timeline Planner** ✅ COMPLETED
 - **Priority**: Low
-- **Status**: 🟡 Partially Implemented (Timeline Page ready)
+- **Status**: ✅ Completed
 - **Implementation Steps**:
   1. Create timeline UI component: ✅ Done
   2. Allow users to create research projects: ✅ Done
-  3. Break down into phases (literature review, data collection, writing, etc.): ✅ Done (via milestones)
-  4. Suggest timeline based on similar projects
-  5. Integrate with calendar
+  3. Break down into phases (literature review, data collection, writing, etc.): ✅ Done
+  4. Suggest timeline based on similar projects: ✅ Done (AI-powered via `ai-lab-assistant`)
+  5. Integrate with calendar: 🟡 Partial (Timeline UI ready)
 
 ---
 

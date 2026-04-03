@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Plus, Clock, CheckCircle2, Circle, ChevronRight, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Clock, CheckCircle2, Circle, ChevronRight, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +42,7 @@ const TimelinePage = () => {
   const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
   const [newMilestone, setNewMilestone] = useState({ title: '', description: '', due_date: '' });
+  const [isSuggesting, setIsSuggesting] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -120,6 +121,44 @@ const TimelinePage = () => {
     }
   };
 
+  const handleSuggestMilestones = async (timeline: Timeline) => {
+    try {
+      setIsSuggesting(timeline.id);
+      const { data, error } = await supabase.functions.invoke('ai-lab-assistant', {
+        body: {
+          type: 'generate_timeline',
+          title: timeline.title,
+          description: timeline.description,
+        },
+      });
+
+      if (error) throw error;
+
+      const { milestones } = data;
+      if (milestones && Array.isArray(milestones)) {
+        const milestonesToInsert = milestones.map((m: any) => ({
+          timeline_id: timeline.id,
+          title: m.title,
+          description: m.description,
+          status: 'pending'
+        }));
+
+        const { error: insertError } = await supabase
+          .from('research_milestones')
+          .insert(milestonesToInsert);
+
+        if (insertError) throw insertError;
+        toast.success(`Generated ${milestones.length} suggested milestones`);
+        fetchTimelines();
+      }
+    } catch (error) {
+      console.error('Error suggesting milestones:', error);
+      toast.error('Failed to generate suggestions');
+    } finally {
+      setIsSuggesting(null);
+    }
+  };
+
   const toggleMilestoneStatus = async (milestone: Milestone) => {
     const newStatus = milestone.status === 'completed' ? 'pending' : 'completed';
     try {
@@ -143,6 +182,16 @@ const TimelinePage = () => {
       fetchTimelines();
     } catch (error) {
       toast.error('Failed to delete timeline');
+    }
+  };
+
+  const deleteMilestone = async (id: string) => {
+    try {
+      const { error } = await supabase.from('research_milestones').delete().eq('id', id);
+      if (error) throw error;
+      fetchTimelines();
+    } catch (error) {
+      toast.error('Failed to delete milestone');
     }
   };
 
@@ -211,7 +260,21 @@ const TimelinePage = () => {
                     <CardTitle className="text-xl">{timeline.title}</CardTitle>
                     <CardDescription className="mt-1">{timeline.description}</CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSuggestMilestones(timeline)}
+                      disabled={isSuggesting === timeline.id}
+                      className="text-primary border-primary/20 hover:bg-primary/5"
+                    >
+                      {isSuggesting === timeline.id ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4 mr-2" />
+                      )}
+                      AI Suggest
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -236,9 +299,20 @@ const TimelinePage = () => {
               </CardHeader>
               <CardContent className="pt-6">
                 {timeline.milestones.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic text-center py-4">
-                    No milestones added yet.
-                  </p>
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground italic mb-4">
+                      No milestones added yet.
+                    </p>
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      onClick={() => handleSuggestMilestones(timeline)}
+                      disabled={isSuggesting === timeline.id}
+                    >
+                      {isSuggesting === timeline.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                      Let AI suggest some milestones
+                    </Button>
+                  </div>
                 ) : (
                   <div className="relative">
                     {/* Vertical line */}
@@ -246,7 +320,7 @@ const TimelinePage = () => {
                     
                     <div className="space-y-6">
                       {timeline.milestones.map((milestone) => (
-                        <div key={milestone.id} className="relative pl-10">
+                        <div key={milestone.id} className="relative pl-10 group">
                           <div 
                             className={`absolute left-0 p-1 rounded-full border bg-background z-10 cursor-pointer transition-colors ${
                               milestone.status === 'completed' 
@@ -282,6 +356,14 @@ const TimelinePage = () => {
                               <Badge variant={milestone.status === 'completed' ? 'secondary' : 'default'} className="capitalize">
                                 {milestone.status?.replace('_', ' ')}
                               </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="opacity-0 group-hover:opacity-100 text-destructive h-8 w-8 p-0"
+                                onClick={() => deleteMilestone(milestone.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
                           </div>
                         </div>
