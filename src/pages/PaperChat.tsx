@@ -14,9 +14,10 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Upload, Send, FileText, X, Loader2, MessageSquare, PlusCircle, FileSearch } from 'lucide-react';
+import { BookOpen, Upload, Send, FileText, X, Loader2, MessageSquare, PlusCircle, FileSearch, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { downloadAsMarkdown } from '@/lib/utils';
 
 interface Paper {
   id: string;
@@ -225,6 +226,24 @@ const PaperChat = () => {
     toast.success('Started a new conversation');
   };
 
+  const handleExportChat = () => {
+    if (!selectedPaper || messages.length === 0) return;
+
+    let md = `# Conversation about: ${selectedPaper.title}\n\n`;
+    
+    messages.forEach(msg => {
+      const role = msg.role === 'user' ? 'User' : 'ScholarGPT';
+      md += `### ${role}\n${msg.content}\n\n`;
+      if (msg.role === 'assistant' && msg.chunks && msg.chunks.length > 0) {
+        md += `*Sources: Pages ${[...new Set(msg.chunks.map(c => c.page_number).filter(Boolean))].join(', ')}*\n\n`;
+      }
+    });
+
+    const filename = `chat-${selectedPaper.title.toLowerCase().replace(/\s+/g, '-')}.md`;
+    downloadAsMarkdown(md, filename);
+    toast.success('Conversation exported as Markdown');
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !selectedPaper || !user) return;
 
@@ -428,6 +447,12 @@ const PaperChat = () => {
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-1">
+                      {messages.length > 0 && (
+                        <Button variant="outline" size="sm" onClick={handleExportChat} title="Export Chat to Markdown">
+                          <Download className="w-4 h-4 mr-1" />
+                          Export
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" onClick={startNewConversation}>
                         <PlusCircle className="w-4 h-4 mr-1" />
                         New conversation

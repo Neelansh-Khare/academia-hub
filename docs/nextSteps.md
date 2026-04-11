@@ -462,11 +462,11 @@ All tables have TypeScript types defined in `src/integrations/supabase/types.ts`
 
 **Task 9.2: Integration with Notion/Obsidian**
 - **Priority**: Low
-- **Status**: ❌ Not Started
+- **Status**: 🟡 Partially Implemented (Markdown export added)
 - **Implementation Steps**:
   1. Create export functionality:
-     - Export research roadmap to Notion page
-     - Export paper summaries to Obsidian notes
+     - Export research roadmap to Notion/Obsidian (Markdown): ✅ Done
+     - Export paper chat conversations (Markdown): ✅ Done
      - Export bibliography to BibTeX: ✅ Done
   2. Add import functionality (if APIs available)
   3. Two-way sync (if feasible)

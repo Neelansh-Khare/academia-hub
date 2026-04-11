@@ -35,7 +35,11 @@ export function exportToBibTeX(publications: BibTeXData[], filename: string = 'p
     return entry;
   }).join('\n\n');
 
-  const blob = new Blob([bibEntries], { type: 'text/plain' });
+  downloadFile(bibEntries, filename, 'text/plain');
+}
+
+export function downloadFile(content: string, filename: string, contentType: string = 'text/plain') {
+  const blob = new Blob([content], { type: contentType });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -44,4 +48,8 @@ export function exportToBibTeX(publications: BibTeXData[], filename: string = 'p
   a.click();
   window.URL.revokeObjectURL(url);
   document.body.removeChild(a);
+}
+
+export function downloadAsMarkdown(content: string, filename: string) {
+  downloadFile(content, filename, 'text/markdown');
 }

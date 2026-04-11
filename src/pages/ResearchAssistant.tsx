@@ -13,9 +13,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Sparkles, FileText, Lightbulb, List, Database, Code2, ExternalLink, Loader2 } from 'lucide-react';
+import { Sparkles, FileText, Lightbulb, List, Database, Code2, ExternalLink, Loader2, Download } from 'lucide-react';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { downloadAsMarkdown } from '@/lib/utils';
 
 interface ResearchOutput {
   papers: Array<{
@@ -163,6 +165,56 @@ const ResearchAssistant = () => {
     }
   };
 
+  const handleExportMarkdown = () => {
+    if (!output) return;
+
+    let md = `# Research Roadmap: ${prompt}\n\n`;
+    
+    md += `## Relevant Papers\n\n`;
+    output.papers.forEach(paper => {
+      md += `### ${paper.title}\n`;
+      if (paper.authors) md += `**Authors:** ${paper.authors.join(', ')}\n\n`;
+      if (paper.year || paper.venue) {
+        md += `*${paper.venue || ''} ${paper.year ? `(${paper.year})` : ''}*\n\n`;
+      }
+      if (paper.abstract) md += `${paper.abstract}\n\n`;
+      if (paper.url) md += `[View Paper](${paper.url})\n\n`;
+      md += `---\n\n`;
+    });
+
+    md += `## Project Ideas\n\n`;
+    output.project_ideas.forEach(idea => {
+      md += `### ${idea.title}\n`;
+      md += `${idea.description}\n\n`;
+      if (idea.methodology) md += `**Methodology:** ${idea.methodology}\n\n`;
+    });
+
+    md += `## Paper Outline\n\n`;
+    output.outline.sections.forEach((section, index) => {
+      md += `### ${index + 1}. ${section.title}\n`;
+      md += `${section.description}\n\n`;
+    });
+
+    md += `## Datasets\n\n`;
+    output.datasets.forEach(dataset => {
+      md += `- **${dataset.name}**: ${dataset.description}`;
+      if (dataset.url) md += ` ([Link](${dataset.url}))`;
+      md += `\n`;
+    });
+    md += `\n`;
+
+    md += `## Libraries & Tools\n\n`;
+    output.libraries.forEach(lib => {
+      md += `- **${lib.name}**: ${lib.description}`;
+      if (lib.url) md += ` ([Link](${lib.url}))`;
+      md += `\n`;
+    });
+
+    const filename = `research-roadmap-${prompt.toLowerCase().slice(0, 20).replace(/\s+/g, '-')}.md`;
+    downloadAsMarkdown(md, filename);
+    toast.success('Research roadmap exported as Markdown');
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="mb-8">
@@ -214,6 +266,12 @@ const ResearchAssistant = () => {
 
           {output && (
             <div className="space-y-6">
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={handleExportMarkdown} className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Export Roadmap to Markdown
+                </Button>
+              </div>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

@@ -20,11 +20,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Plus, Clock, CheckCircle2, Circle, ChevronRight, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Clock, CheckCircle2, Circle, ChevronRight, Trash2, Sparkles, Loader2, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import type { Database } from '@/integrations/supabase/types';
+import { downloadAsMarkdown } from '@/lib/utils';
 
 type Timeline = Database['public']['Tables']['research_timelines']['Row'];
 type Milestone = Database['public']['Tables']['research_milestones']['Row'];
@@ -159,6 +160,31 @@ const TimelinePage = () => {
     }
   };
 
+  const handleExportMarkdown = (timeline: TimelineWithMilestones) => {
+    let md = `# ${timeline.title}\n\n`;
+    if (timeline.description) {
+      md += `${timeline.description}\n\n`;
+    }
+    md += `## Milestones\n\n`;
+    
+    if (timeline.milestones.length === 0) {
+      md += `*No milestones added yet.*\n`;
+    } else {
+      timeline.milestones.forEach(m => {
+        const status = m.status === 'completed' ? '[x]' : '[ ]';
+        const date = m.due_date ? ` (Due: ${format(new Date(m.due_date), 'MMM d, yyyy')})` : '';
+        md += `- ${status} **${m.title}**${date}\n`;
+        if (m.description) {
+          md += `  ${m.description}\n`;
+        }
+      });
+    }
+
+    const filename = `${timeline.title.toLowerCase().replace(/\s+/g, '-')}-timeline.md`;
+    downloadAsMarkdown(md, filename);
+    toast.success('Timeline exported as Markdown');
+  };
+
   const toggleMilestoneStatus = async (milestone: Milestone) => {
     const newStatus = milestone.status === 'completed' ? 'pending' : 'completed';
     try {
@@ -261,6 +287,15 @@ const TimelinePage = () => {
                     <CardDescription className="mt-1">{timeline.description}</CardDescription>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExportMarkdown(timeline)}
+                      title="Export to Markdown"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
