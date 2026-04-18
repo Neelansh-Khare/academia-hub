@@ -146,6 +146,18 @@ const Dashboard = () => {
                 </CardDescription>
               </CardHeader>
             </Card>
+
+            <Card className="border-border/50 hover:shadow-elevated transition-shadow cursor-pointer group" onClick={() => navigate('/community')}>
+              <CardHeader>
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                </div>
+                <CardTitle className="font-display">Community Q&A</CardTitle>
+                <CardDescription>
+                  Ask research questions and get AI-powered insights
+                </CardDescription>
+              </CardHeader>
+            </Card>
           </div>
 
           {/* Recommended Matches Section */}

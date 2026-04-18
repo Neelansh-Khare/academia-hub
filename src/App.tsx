@@ -15,6 +15,8 @@ import PaperChat from "./pages/PaperChat";
 import ColdEmailGenerator from "./pages/ColdEmailGenerator";
 import Messages from "./pages/Messages";
 import Timeline from "./pages/Timeline";
+import Community from "./pages/Community";
+import QuestionDetail from "./pages/QuestionDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,8 @@ const App = () => (
             <Route path="/cold-email" element={<ColdEmailGenerator />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/timeline" element={<Timeline />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/community/question/:id" element={<QuestionDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

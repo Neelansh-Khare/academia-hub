@@ -682,6 +682,116 @@ export type Database = {
           }
         ]
       }
+      questions: {
+        Row: {
+          id: string
+          author_id: string
+          title: string
+          content: string
+          tags: string[] | null
+          upvotes: number
+          views: number
+          is_ama: boolean
+          scheduled_for: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          author_id: string
+          title: string
+          content: string
+          tags?: string[] | null
+          upvotes?: number
+          views?: number
+          is_ama?: boolean
+          scheduled_for?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          author_id?: string
+          title?: string
+          content?: string
+          tags?: string[] | null
+          upvotes?: number
+          views?: number
+          is_ama?: boolean
+          scheduled_for?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      answers: {
+        Row: {
+          id: string
+          question_id: string
+          author_id: string
+          content: string
+          upvotes: number
+          is_accepted: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          question_id: string
+          author_id: string
+          content: string
+          upvotes?: number
+          is_accepted?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          question_id?: string
+          author_id?: string
+          content?: string
+          upvotes?: number
+          is_accepted?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      votes: {
+        Row: {
+          id: string
+          user_id: string
+          item_id: string
+          item_type: string
+          vote_type: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          item_id: string
+          item_type: string
+          vote_type: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          item_id?: string
+          item_type?: string
+          vote_type?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

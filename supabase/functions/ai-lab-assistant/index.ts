@@ -626,6 +626,68 @@ Respond ONLY with valid JSON, no markdown code blocks.`;
 }
 
 // ============================================
+// Community Q&A AI Answers
+// ============================================
+
+async function handleCommunityAnswer(
+  body: { title: string; content: string; tags?: string[] },
+  apiKey: string
+): Promise<{ answer: string; sources: Paper[] }> {
+  const { title, content, tags = [] } = body;
+  console.log(`Generating AI answer for: ${title}`);
+
+  // Search for relevant context
+  const searchQuery = `${title} ${tags.join(' ')}`;
+  const [papers, datasets] = await Promise.all([
+    searchSemanticScholar(searchQuery, 3),
+    searchHuggingFaceDatasets(searchQuery, 2),
+  ]);
+
+  const paperSummaries = papers.map(p => 
+    `- "${p.title}" (${p.year}): ${p.abstract?.substring(0, 150)}...`
+  ).join('\n');
+
+  const systemPrompt = `You are an expert research assistant for AcademiaLink's community. Provide a helpful, accurate, and professional answer to the user's research question. Use any provided paper context if relevant. Be concise and cite sources if you use them.`;
+
+  const userPrompt = `Question Title: "${title}"
+Question Content: "${content}"
+Tags: ${tags.join(', ')}
+
+Relevant Research Context:
+${paperSummaries || 'No specific papers found for this topic.'}
+
+Generate a helpful answer for the community. If you use the papers, mention them.`;
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    console.error(`OpenAI API error: ${response.status}`);
+    throw new Error("OpenAI API error");
+  }
+
+  const data = await response.json();
+  const answer = data.choices?.[0]?.message?.content || "";
+
+  return {
+    answer,
+    sources: papers,
+  };
+}
+
+// ============================================
 // Main Server Handler
 // ============================================
 
@@ -641,6 +703,20 @@ serve(async (req: Request) => {
 
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not configured");
+    }
+
+    // Handle community_answer type requests
+    if (body.type === 'community_answer' && body.title) {
+      console.log("Generating community answer for:", body.title);
+
+      const result = await handleCommunityAnswer(
+        { title: body.title, content: body.content, tags: body.tags },
+        OPENAI_API_KEY
+      );
+
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Handle generate_timeline type requests
