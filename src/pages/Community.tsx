@@ -58,7 +58,7 @@ const Community = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddingQuestion, setIsAddingQuestion] = useState(false);
-  const [newQuestion, setNewQuestion] = useState({ title: '', content: '', tags: '' });
+  const [newQuestion, setNewQuestion] = useState({ title: '', content: '', tags: '', is_ama: false, scheduled_for: '' });
   const [filter, setFilter] = useState<'newest' | 'popular' | 'ama'>('newest');
 
   useEffect(() => {
@@ -117,13 +117,15 @@ const Community = () => {
         title: newQuestion.title,
         content: newQuestion.content,
         tags: tags,
+        is_ama: newQuestion.is_ama,
+        scheduled_for: newQuestion.scheduled_for || null,
       }).select().single();
 
       if (error) throw error;
 
-      toast.success('Question posted successfully!');
+      toast.success(newQuestion.is_ama ? 'AMA session scheduled!' : 'Question posted successfully!');
       setIsAddingQuestion(false);
-      setNewQuestion({ title: '', content: '', tags: '' });
+      setNewQuestion({ title: '', content: '', tags: '', is_ama: false, scheduled_for: '' });
       fetchQuestions();
       
       // Navigate to the new question detail page

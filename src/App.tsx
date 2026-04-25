@@ -17,6 +17,8 @@ import Messages from "./pages/Messages";
 import Timeline from "./pages/Timeline";
 import Community from "./pages/Community";
 import QuestionDetail from "./pages/QuestionDetail";
+import Documents from "./pages/Documents";
+import DocumentDetail from "./pages/DocumentDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +44,8 @@ const App = () => (
             <Route path="/timeline" element={<Timeline />} />
             <Route path="/community" element={<Community />} />
             <Route path="/community/question/:id" element={<QuestionDetail />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/documents/:id" element={<DocumentDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

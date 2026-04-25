@@ -54,6 +54,7 @@ type Answer = Database['public']['Tables']['answers']['Row'] & {
     full_name: string | null;
     avatar_url: string | null;
   };
+  replies?: Answer[];
 };
 
 const QuestionDetail = () => {
@@ -64,6 +65,8 @@ const QuestionDetail = () => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [loading, setLoading] = useState(true);
   const [newAnswer, setNewAnswer] = useState('');
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<{ answer: string; sources: any[] } | null>(null);
@@ -92,7 +95,7 @@ const QuestionDetail = () => {
       if (qError) throw qError;
       setQuestion(qData as any);
 
-      // Fetch answers
+      // Fetch answers and group by parent_id
       const { data: aData, error: aError } = await supabase
         .from('answers')
         .select(`
@@ -100,11 +103,20 @@ const QuestionDetail = () => {
           author:profiles!answers_author_id_fkey(full_name, avatar_url)
         `)
         .eq('question_id', id)
-        .order('upvotes', { ascending: false })
         .order('created_at', { ascending: true });
 
       if (aError) throw aError;
-      setAnswers(aData as any);
+      
+      const allAnswers = aData as any[];
+      const mainAnswers = allAnswers.filter(a => !a.parent_id);
+      const replies = allAnswers.filter(a => a.parent_id);
+      
+      const threadedAnswers = mainAnswers.map(main => ({
+        ...main,
+        replies: replies.filter(r => r.parent_id === main.id)
+      }));
+
+      setAnswers(threadedAnswers);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load question details');
@@ -142,7 +154,17 @@ const QuestionDetail = () => {
       if (itemType === 'question') {
         setQuestion(prev => prev ? { ...prev, upvotes: prev.upvotes + voteType } : null);
       } else {
-        setAnswers(prev => prev.map(a => a.id === itemId ? { ...a, upvotes: a.upvotes + voteType } : a));
+        // Find and update the answer or its reply
+        setAnswers(prev => prev.map(a => {
+          if (a.id === itemId) return { ...a, upvotes: a.upvotes + voteType };
+          if (a.replies) {
+            return {
+              ...a,
+              replies: a.replies.map(r => r.id === itemId ? { ...r, upvotes: r.upvotes + voteType } : r)
+            };
+          }
+          return a;
+        }));
       }
       
       toast.success('Vote recorded');
@@ -152,9 +174,10 @@ const QuestionDetail = () => {
     }
   };
 
-  const handleSubmitAnswer = async () => {
-    if (!user || !id || !newAnswer.trim()) {
-      toast.error('Please write an answer');
+  const handleSubmitAnswer = async (parentId: string | null = null) => {
+    const content = parentId ? replyContent : newAnswer;
+    if (!user || !id || !content.trim()) {
+      toast.error('Please write something');
       return;
     }
 
@@ -163,18 +186,24 @@ const QuestionDetail = () => {
       const { error } = await supabase.from('answers').insert({
         question_id: id,
         author_id: user.id,
-        content: newAnswer,
+        content: content,
+        parent_id: parentId
       });
 
       if (error) throw error;
 
-      toast.success('Answer posted successfully!');
-      setNewAnswer('');
-      setAiSuggestion(null);
+      toast.success(parentId ? 'Reply posted!' : 'Answer posted successfully!');
+      if (parentId) {
+        setReplyTo(null);
+        setReplyContent('');
+      } else {
+        setNewAnswer('');
+        setAiSuggestion(null);
+      }
       fetchQuestionAndAnswers();
     } catch (error) {
-      console.error('Error posting answer:', error);
-      toast.error('Failed to post answer');
+      console.error('Error posting:', error);
+      toast.error('Failed to post');
     } finally {
       setIsSubmitting(false);
     }
@@ -333,49 +362,94 @@ const QuestionDetail = () => {
         </div>
 
         {answers.map((answer) => (
-          <div key={answer.id} className="flex flex-col md:flex-row gap-6 py-6 border-b last:border-0">
-            <div className="flex flex-col items-center gap-2">
-              <button 
-                className="text-muted-foreground hover:text-primary transition-colors"
-                onClick={() => handleVote(answer.id, 'answer', 1)}
-              >
-                <ArrowUpCircle className="w-7 h-7" />
-              </button>
-              <span className="font-bold text-lg">{answer.upvotes}</span>
-              <button 
-                className="text-muted-foreground hover:text-destructive transition-colors"
-                onClick={() => handleVote(answer.id, 'answer', -1)}
-              >
-                <ArrowDownCircle className="w-7 h-7" />
-              </button>
-              {answer.is_accepted && (
-                <CheckCircle2 className="w-6 h-6 text-green-500 mt-2" title="Accepted Answer" />
-              )}
-            </div>
-
-            <div className="flex-1">
-              <div className="prose prose-slate max-w-none mb-6 text-foreground/90 whitespace-pre-wrap text-sm">
-                {answer.content}
+          <div key={answer.id} className="border-b last:border-0 py-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="flex flex-col items-center gap-2">
+                <button 
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                  onClick={() => handleVote(answer.id, 'answer', 1)}
+                >
+                  <ArrowUpCircle className="w-7 h-7" />
+                </button>
+                <span className="font-bold text-lg">{answer.upvotes}</span>
+                <button 
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                  onClick={() => handleVote(answer.id, 'answer', -1)}
+                >
+                  <ArrowDownCircle className="w-7 h-7" />
+                </button>
+                {answer.is_accepted && (
+                  <CheckCircle2 className="w-6 h-6 text-green-500 mt-2" title="Accepted Answer" />
+                )}
               </div>
 
-              <div className="flex items-center justify-between">
-                 <div className="flex items-center gap-4">
-                  <Button variant="ghost" size="sm" className="h-8 text-xs gap-2">
-                    <ThumbsUp className="w-3.5 h-3.5" />
-                    Helpful
-                  </Button>
+              <div className="flex-1">
+                <div className="prose prose-slate max-w-none mb-4 text-foreground/90 whitespace-pre-wrap text-sm">
+                  {answer.content}
                 </div>
-                
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/20">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={answer.author?.avatar_url || ''} />
-                    <AvatarFallback>{answer.author?.full_name?.charAt(0) || 'U'}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-medium">{answer.author?.full_name || 'Anonymous'}</span>
-                    <span className="text-[10px] text-muted-foreground">answered {format(new Date(answer.created_at), 'MMM d, yyyy')}</span>
+
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="sm" className="h-8 text-xs gap-2" onClick={() => setReplyTo(answer.id)}>
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Reply
+                    </Button>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 p-1.5 rounded-lg bg-muted/20">
+                    <Avatar className="w-7 h-7">
+                      <AvatarImage src={answer.author?.avatar_url || ''} />
+                      <AvatarFallback>{answer.author?.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-medium">{answer.author?.full_name || 'Anonymous'}</span>
+                      <span className="text-[9px] text-muted-foreground">answered {format(new Date(answer.created_at), 'MMM d, yyyy')}</span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Replies */}
+                {answer.replies && answer.replies.length > 0 && (
+                  <div className="ml-4 pl-4 border-l-2 border-muted space-y-4 mt-4">
+                    {answer.replies.map(reply => (
+                      <div key={reply.id} className="flex gap-4">
+                        <div className="flex flex-col items-center gap-1 mt-1">
+                           <button onClick={() => handleVote(reply.id, 'answer', 1)} className="text-muted-foreground hover:text-primary"><ArrowUpCircle className="w-4 h-4" /></button>
+                           <span className="text-[10px] font-bold">{reply.upvotes}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-foreground/80 mb-2">{reply.content}</p>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="w-5 h-5">
+                              <AvatarImage src={reply.author?.avatar_url || ''} />
+                              <AvatarFallback className="text-[8px]">{reply.author?.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-[10px] font-medium">{reply.author?.full_name || 'Anonymous'}</span>
+                            <span className="text-[10px] text-muted-foreground">{format(new Date(reply.created_at), 'MMM d, yyyy')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Reply Form */}
+                {replyTo === answer.id && (
+                  <div className="mt-4 ml-4">
+                    <Textarea 
+                      placeholder="Write your reply..."
+                      className="min-h-[80px] text-sm mb-2"
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setReplyTo(null)}>Cancel</Button>
+                      <Button size="sm" onClick={() => handleSubmitAnswer(answer.id)} disabled={isSubmitting || !replyContent.trim()}>
+                        Post Reply
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -451,7 +525,7 @@ const QuestionDetail = () => {
           />
           <div className="flex justify-end">
             <Button 
-              onClick={handleSubmitAnswer} 
+              onClick={() => handleSubmitAnswer(null)} 
               disabled={isSubmitting || !newAnswer.trim()}
             >
               {isSubmitting ? 'Posting...' : 'Post Your Answer'}
