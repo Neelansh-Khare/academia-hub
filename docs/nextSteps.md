@@ -757,3 +757,36 @@ Before deploying new features:
 - Consider using LangChain or LlamaIndex if RAG complexity grows
 - For production, consider adding monitoring (Sentry, LogRocket) and analytics
 - Using OpenAI `gpt-4o-mini` for cost-effective LLM features
+
+---
+
+## Experiment Planning Challenge: Specialization Roadmap
+
+To align AcademiaHub with the "Experiment Planning" challenge requirements, the following specialized features should be prioritized:
+
+### Phase 1: Operational Specialization (P0)
+
+**Task E1.1: Granular Protocol Generation**
+- Update the `ai-lab-assistant` prompt to require step-by-step methodology grounded in real published protocols (e.g., protocols.io style).
+- Ensure the output includes specific chemical concentrations, temperatures, and durations.
+
+**Task E1.2: Materials, Supply Chain & Budgeting**
+- Implement a generation layer for specific reagents with mock/fetched catalog numbers and suppliers (e.g., Sigma-Aldrich, Thermo Fisher).
+- Add logic to calculate a realistic budget estimate with individual line items.
+
+**Task E1.3: Literature QC & Novelty Signal**
+- Enhance the literature search step to explicitly output a novelty signal: "Not found", "Similar work exists", or "Exact match found".
+- Surface exactly 1-3 most relevant references as a "plagiarism check for science".
+
+### Phase 2: Learning Loop & UI (P1)
+
+**Task E2.1: Scientist Review Interface (Stretch Goal)**
+- Adapt `DocumentDetail.tsx` or create a new "Experiment Plan" view where experts can rate, correct, and annotate specific plan sections (reagents, budget, etc.).
+- Store these corrections in a structured `feedback_store` table.
+
+**Task E2.2: Feedback-Driven Generation**
+- Modify the generation prompt to include relevant prior corrections as few-shot examples (Task 9.2 extension).
+- Ensure the system "learns" from expert knowledge over time without re-prompting.
+
+**Task E2.3: Operational Timeline Integration**
+- Integrate Task 8.1 (Timelines) directly into the experiment plan output, including phased breakdowns and dependencies.
